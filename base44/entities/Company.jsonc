@@ -1,0 +1,71 @@
+{
+  "name": "Company",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Company Name"
+    },
+    "address": {
+      "type": "string",
+      "title": "Address"
+    },
+    "city": {
+      "type": "string",
+      "title": "City"
+    },
+    "state": {
+      "type": "string",
+      "title": "State",
+      "default": "NM"
+    },
+    "zip": {
+      "type": "string",
+      "title": "ZIP"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Phone"
+    },
+    "pay_period_type": {
+      "type": "string",
+      "enum": [
+        "biweekly"
+      ],
+      "default": "biweekly",
+      "title": "Pay Period Type"
+    },
+    "pay_period_start_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Pay Period Start Date"
+    },
+    "workweek_start": {
+      "type": "string",
+      "enum": [
+        "sunday",
+        "monday"
+      ],
+      "default": "sunday",
+      "title": "Workweek Start"
+    },
+    "overtime_threshold": {
+      "type": "number",
+      "default": 40,
+      "title": "OT Threshold (hrs/week)"
+    },
+    "qb_connected": {
+      "type": "boolean",
+      "default": false,
+      "title": "QuickBooks Connected"
+    },
+    "qb_last_sync": {
+      "type": "string",
+      "format": "date-time",
+      "title": "QB Last Sync"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "name": "Punch",
+  "type": "object",
+  "properties": {
+    "worker_email": {
+      "type": "string",
+      "title": "Worker Email"
+    },
+    "worker_name": {
+      "type": "string",
+      "title": "Worker Name"
+    },
+    "punch_type": {
+      "type": "string",
+      "enum": [
+        "clock_in",
+        "break_start",
+        "break_end",
+        "clock_out"
+      ],
+      "title": "Punch Type"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Timestamp"
+    },
+    "device_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Device Timestamp"
+    },
+    "latitude": {
+      "type": "number",
+      "title": "Latitude"
+    },
+    "longitude": {
+      "type": "number",
+      "title": "Longitude"
+    },
+    "gps_accuracy": {
+      "type": "number",
+      "title": "GPS Accuracy (m)"
+    },
+    "site_id": {
+      "type": "string",
+      "title": "Site ID"
+    },
+    "site_name": {
+      "type": "string",
+      "title": "Site Name"
+    },
+    "out_of_geofence": {
+      "type": "boolean",
+      "default": false,
+      "title": "Out of Geofence"
+    },
+    "out_of_geofence_reason": {
+      "type": "string",
+      "enum": [
+        "offsite_moving_equipment",
+        "forgot_to_clock",
+        "site_not_listed",
+        "gps_inaccurate",
+        "other"
+      ],
+      "title": "OOG Reason"
+    },
+    "note": {
+      "type": "string",
+      "title": "Note"
+    },
+    "offline_captured": {
+      "type": "boolean",
+      "default": false,
+      "title": "Offline Captured"
+    },
+    "synced_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Synced At"
+    }
+  },
+  "required": [
+    "worker_email",
+    "punch_type",
+    "timestamp"
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "name": "Expense",
+  "type": "object",
+  "properties": {
+    "worker_email": {
+      "type": "string",
+      "title": "Worker Email"
+    },
+    "worker_name": {
+      "type": "string",
+      "title": "Worker Name"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "fuel",
+        "supplies",
+        "repairs",
+        "tools",
+        "mileage",
+        "other"
+      ],
+      "title": "Category"
+    },
+    "amount": {
+      "type": "number",
+      "title": "Amount ($)"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date"
+    },
+    "site_id": {
+      "type": "string",
+      "title": "Site/Job ID"
+    },
+    "site_name": {
+      "type": "string",
+      "title": "Site/Job Name"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    },
+    "receipt_url": {
+      "type": "string",
+      "title": "Receipt URL"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "title": "Status"
+    }
+  },
+  "required": [
+    "worker_email",
+    "category",
+    "amount",
+    "date"
+  ]
+}

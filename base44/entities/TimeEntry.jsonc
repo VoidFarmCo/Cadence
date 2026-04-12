@@ -1,0 +1,88 @@
+{
+  "name": "TimeEntry",
+  "type": "object",
+  "properties": {
+    "worker_email": {
+      "type": "string",
+      "title": "Worker Email"
+    },
+    "worker_name": {
+      "type": "string",
+      "title": "Worker Name"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date"
+    },
+    "clock_in": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Clock In"
+    },
+    "clock_out": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Clock Out"
+    },
+    "break_minutes": {
+      "type": "number",
+      "default": 0,
+      "title": "Break (min)"
+    },
+    "total_hours": {
+      "type": "number",
+      "title": "Total Hours"
+    },
+    "regular_hours": {
+      "type": "number",
+      "title": "Regular Hours"
+    },
+    "overtime_hours": {
+      "type": "number",
+      "default": 0,
+      "title": "Overtime Hours"
+    },
+    "site_id": {
+      "type": "string",
+      "title": "Site ID"
+    },
+    "site_name": {
+      "type": "string",
+      "title": "Site Name"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "submitted",
+        "approved",
+        "rejected",
+        "corrected"
+      ],
+      "default": "pending",
+      "title": "Status"
+    },
+    "pay_period_id": {
+      "type": "string",
+      "title": "Pay Period ID"
+    },
+    "has_exception": {
+      "type": "boolean",
+      "default": false,
+      "title": "Has Exception"
+    },
+    "exception_notes": {
+      "type": "string",
+      "title": "Exception Notes"
+    },
+    "edit_reason": {
+      "type": "string",
+      "title": "Edit Reason"
+    }
+  },
+  "required": [
+    "worker_email",
+    "date"
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "name": "PayrollRun",
+  "type": "object",
+  "properties": {
+    "pay_period_id": {
+      "type": "string",
+      "title": "Pay Period ID"
+    },
+    "pay_period_label": {
+      "type": "string",
+      "title": "Pay Period Label"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "reviewing",
+        "submitted",
+        "completed",
+        "failed"
+      ],
+      "default": "draft",
+      "title": "Status"
+    },
+    "total_regular_hours": {
+      "type": "number",
+      "default": 0,
+      "title": "Total Regular Hours"
+    },
+    "total_overtime_hours": {
+      "type": "number",
+      "default": 0,
+      "title": "Total OT Hours"
+    },
+    "worker_count": {
+      "type": "number",
+      "default": 0,
+      "title": "Worker Count"
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Submitted At"
+    },
+    "submitted_by": {
+      "type": "string",
+      "title": "Submitted By"
+    },
+    "qb_sync_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "syncing",
+        "synced",
+        "error"
+      ],
+      "title": "QB Sync Status"
+    },
+    "qb_error": {
+      "type": "string",
+      "title": "QB Error"
+    },
+    "worker_results": {
+      "type": "string",
+      "title": "Worker Results JSON"
+    }
+  },
+  "required": [
+    "pay_period_id"
+  ]
+}
