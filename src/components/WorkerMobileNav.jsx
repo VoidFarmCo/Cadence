@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Clock, CalendarDays, CalendarOff, Receipt, UserCircle } from 'lucide-react';
+import { Clock, CalendarDays, CalendarOff, Receipt, UserCircle, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function WorkerMobileNav({ isContractor }) {
@@ -10,6 +10,7 @@ export default function WorkerMobileNav({ isContractor }) {
     { path: '/timesheet', icon: CalendarDays, label: 'Timesheet' },
     { path: '/time-off', icon: CalendarOff, label: 'Time Off' },
     ...(isContractor ? [{ path: '/expenses', icon: Receipt, label: 'Expenses' }] : []),
+    { path: '/tax-forms-worker', icon: FileText, label: 'Forms' },
     { path: '/profile', icon: UserCircle, label: 'Profile' },
   ];
 
