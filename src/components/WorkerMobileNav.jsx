@@ -1,15 +1,16 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Clock, CalendarDays, CalendarOff, Receipt, UserCircle, FileText } from 'lucide-react';
+import { Clock, CalendarDays, CalendarOff, Receipt, UserCircle, FileText, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function WorkerMobileNav({ isContractor }) {
   const { pathname } = useLocation();
 
   const tabs = [
+    { path: '/worker-home', icon: Home, label: 'Home' },
     { path: '/clock', icon: Clock, label: 'Clock' },
     { path: '/timesheet', icon: CalendarDays, label: 'Timesheet' },
     { path: '/time-off', icon: CalendarOff, label: 'Time Off' },
-    ...(isContractor ? [{ path: '/expenses', icon: Receipt, label: 'Expenses' }] : []),
+    ...(isContractor ? [{ path: '/expenses', icon: Receipt, label: 'Expenses' }, { path: '/deductions', icon: FileText, label: 'Deductions' }] : []),
     { path: '/tax-forms-worker', icon: FileText, label: 'Forms' },
     { path: '/profile', icon: UserCircle, label: 'Profile' },
   ];

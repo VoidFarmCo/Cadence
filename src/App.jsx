@@ -19,7 +19,11 @@ import Reports from './pages/employer/Reports';
 import Settings from './pages/employer/Settings';
 import ClockPage from './pages/worker/ClockPage';
 import TaxForms from './pages/employer/TaxForms';
+import MapView from './pages/employer/MapView';
+import SchedulePage from './pages/employer/SchedulePage';
 import TaxFormPage from './pages/worker/TaxFormPage';
+import WorkerHome from './pages/worker/WorkerHome';
+import DeductionsPage from './pages/worker/DeductionsPage';
 import TimesheetPage from './pages/worker/TimesheetPage';
 import TimeOffPage from './pages/worker/TimeOffPage';
 import ExpensesPage from './pages/worker/ExpensesPage';
@@ -63,6 +67,8 @@ const AuthenticatedApp = () => {
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/tax-forms" element={<TaxForms />} />
+        <Route path="/map" element={<MapView />} />
+        <Route path="/schedule" element={<SchedulePage />} />
       </Route>
       {/* Worker Routes */}
       <Route element={<WorkerLayout />}>
@@ -71,7 +77,9 @@ const AuthenticatedApp = () => {
         <Route path="/time-off" element={<TimeOffPage />} />
         <Route path="/expenses" element={<ExpensesPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/worker-home" element={<WorkerHome />} />
         <Route path="/tax-forms-worker" element={<TaxFormPage />} />
+        <Route path="/deductions" element={<DeductionsPage />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

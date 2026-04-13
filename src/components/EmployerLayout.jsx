@@ -18,7 +18,7 @@ export default function EmployerLayout() {
     <div className="flex min-h-screen bg-background">
       <EmployerSidebar user={user} />
       <div className="flex-1 flex flex-col min-h-screen">
-        <MobileHeader user={user} />
+        <MobileHeader user={user} isAdmin={true} />
         <main className="flex-1 p-4 lg:p-8 max-w-7xl w-full mx-auto">
           <Outlet />
         </main>

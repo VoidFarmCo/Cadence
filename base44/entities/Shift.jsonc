@@ -1,0 +1,67 @@
+{
+  "name": "Shift",
+  "type": "object",
+  "properties": {
+    "worker_email": {
+      "type": "string",
+      "title": "Worker Email"
+    },
+    "worker_name": {
+      "type": "string",
+      "title": "Worker Name"
+    },
+    "site_id": {
+      "type": "string",
+      "title": "Site ID"
+    },
+    "site_name": {
+      "type": "string",
+      "title": "Site Name"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date"
+    },
+    "start_time": {
+      "type": "string",
+      "title": "Start Time (HH:MM)"
+    },
+    "end_time": {
+      "type": "string",
+      "title": "End Time (HH:MM)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "confirmed",
+        "cancelled"
+      ],
+      "default": "scheduled",
+      "title": "Status"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "worker_email",
+    "date"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "created_by": "{{user.email}}"
+        }
+      ]
+    }
+  }
+}

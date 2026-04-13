@@ -1,19 +1,22 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, MapPin, ClipboardCheck, CalendarOff, DollarSign, BarChart3, Settings, LogOut, Sprout, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, MapPin, ClipboardCheck, CalendarOff, DollarSign, BarChart3, Settings, LogOut, Sprout, FileText, Map, CalendarDays } from 'lucide-react';
+
 
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/people', icon: Users, label: 'People' },
   { path: '/sites', icon: MapPin, label: 'Sites & Fields' },
+  { path: '/map', icon: Map, label: 'Live Map' },
+  { path: '/schedule', icon: CalendarDays, label: 'Schedule' },
   { path: '/time-approval', icon: ClipboardCheck, label: 'Time Approval' },
   { path: '/time-off-admin', icon: CalendarOff, label: 'Time Off' },
   { path: '/payroll', icon: DollarSign, label: 'Payroll Runs' },
   { path: '/reports', icon: BarChart3, label: 'Reports' },
-  { path: '/settings', icon: Settings, label: 'Settings' },
   { path: '/tax-forms', icon: FileText, label: 'Tax & HR Forms' },
+  { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export default function EmployerSidebar({ user }) {
