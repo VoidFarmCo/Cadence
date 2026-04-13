@@ -149,10 +149,8 @@ export default function WorkerHome() {
         {[
           { to: '/timesheet', icon: CalendarDays, label: 'View Timesheet', sub: 'Check hours & submit' },
           { to: '/time-off', icon: CalendarOff, label: 'Request Time Off', sub: `${pendingLeave ? '1 request pending' : 'PTO, sick, unpaid'}` },
-          ...(profile?.worker_type === 'contractor' ? [
-            { to: '/expenses', icon: Receipt, label: 'Expenses', sub: 'Submit receipts' },
-            { to: '/deductions', icon: TrendingUp, label: '1099 Deductions', sub: 'Track tax deductions' },
-          ] : []),
+          { to: '/expenses', icon: Receipt, label: 'Expenses', sub: 'Submit receipts' },
+          { to: '/deductions', icon: TrendingUp, label: '1099 Deductions', sub: 'Track tax deductions' },
           { to: '/tax-forms-worker', icon: FileText, label: 'Tax & HR Forms', sub: pendingForms > 0 ? `${pendingForms} pending` : 'Completed forms' },
         ].map(({ to, icon: Icon, label, sub }) => (
           <Link key={to} to={to} className="flex items-center gap-3 bg-card border border-border rounded-xl p-4 hover:border-primary/40 transition-colors">
