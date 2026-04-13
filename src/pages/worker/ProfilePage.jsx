@@ -1,16 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { User, DollarSign, MapPin, LogOut, ExternalLink, Shield, Smartphone } from 'lucide-react';
+import { DollarSign, MapPin, LogOut, Shield, Smartphone, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteInput, setDeleteInput] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -29,6 +32,13 @@ export default function ProfilePage() {
       setProfile(prev => ({ ...prev, pay_preference: value }));
       toast.success('Pay preference updated');
     }
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteInput.trim().toLowerCase() !== 'delete') return;
+    toast.loading('Deleting account...');
+    if (profile) await base44.entities.WorkerProfile.delete(profile.id);
+    await base44.auth.logout();
   }
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" /></div>;
@@ -139,9 +149,41 @@ export default function ProfilePage() {
         </Button>
       </div>
 
-      <Button variant="outline" className="w-full gap-2 text-destructive" onClick={() => base44.auth.logout()}>
+      <Button variant="outline" className="w-full gap-2 text-destructive select-none" onClick={() => base44.auth.logout()}>
         <LogOut className="w-4 h-4" />Sign Out
       </Button>
+
+      {!showDeleteConfirm ? (
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="w-full text-xs text-muted-foreground underline underline-offset-2 pb-2 select-none"
+        >
+          Delete Account
+        </button>
+      ) : (
+        <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+            <p className="text-sm font-semibold text-destructive">Delete Account</p>
+          </div>
+          <p className="text-xs text-muted-foreground">This is permanent. Type <strong>delete</strong> to confirm.</p>
+          <input
+            type="text"
+            value={deleteInput}
+            onChange={e => setDeleteInput(e.target.value)}
+            placeholder="Type delete to confirm"
+            className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
+          />
+          <div className="flex gap-2">
+            <button onClick={() => { setShowDeleteConfirm(false); setDeleteInput(''); }} className="flex-1 text-sm border border-border rounded-md py-2 select-none">Cancel</button>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deleteInput.trim().toLowerCase() !== 'delete'}
+              className="flex-1 text-sm bg-destructive text-destructive-foreground rounded-md py-2 disabled:opacity-40 select-none"
+            >Delete</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

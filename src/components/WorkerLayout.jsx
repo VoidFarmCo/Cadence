@@ -1,10 +1,12 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import WorkerMobileNav from './WorkerMobileNav';
-import MobileHeader from './MobileHeader';
+import NavigationHeader from './NavigationHeader';
 import useCurrentUser from '@/lib/useCurrentUser';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export default function WorkerLayout() {
   const { user, profile, loading, isContractor } = useCurrentUser();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -15,10 +17,20 @@ export default function WorkerLayout() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <MobileHeader user={user} />
-      <main className="flex-1 pb-20 px-4 pt-4 max-w-lg mx-auto w-full">
-        <Outlet />
+    <div className="flex flex-col bg-background" style={{ minHeight: '100dvh' }}>
+      <NavigationHeader user={user} isAdmin={false} />
+      <main className="flex-1 overflow-hidden px-4 pt-4 max-w-lg mx-auto w-full" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={location.pathname}
+            initial={{ x: 18, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -18, opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeInOut' }}
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
       <WorkerMobileNav isContractor={isContractor} />
     </div>

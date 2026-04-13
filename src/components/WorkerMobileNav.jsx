@@ -16,7 +16,7 @@ export default function WorkerMobileNav({ isContractor }) {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-pb">
+    <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {tabs.map(({ path, icon: Icon, label }) => {
           const isActive = pathname === path;
@@ -25,7 +25,7 @@ export default function WorkerMobileNav({ isContractor }) {
               key={path}
               to={path}
               className={cn(
-                "flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all duration-200",
+                "flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all duration-200 select-none active:scale-95",
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground"
