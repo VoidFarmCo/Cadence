@@ -4,11 +4,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
-    // Verify authentication and admin role (required for scheduled automations)
-    const user = await base44.auth.me().catch(() => null);
-    if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
-    }
+    // Scheduled automations run as service role (no user context needed)
 
     // Get all open pay periods
     const openPeriods = await base44.asServiceRole.entities.PayPeriod.filter({
