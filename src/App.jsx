@@ -29,6 +29,7 @@ import TimesheetPage from './pages/worker/TimesheetPage';
 import TimeOffPage from './pages/worker/TimeOffPage';
 import ExpensesPage from './pages/worker/ExpensesPage';
 import ProfilePage from './pages/worker/ProfilePage';
+import Billing from './pages/employer/Billing';
 
 function useDarkMode() {
   useEffect(() => {
@@ -78,6 +79,7 @@ const AuthenticatedApp = () => {
         <Route path="/payroll" element={<PayrollRuns />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/billing" element={<Billing />} />
         <Route path="/tax-forms" element={<TaxForms />} />
         <Route path="/map" element={<MapView />} />
         <Route path="/schedule" element={<SchedulePage />} />

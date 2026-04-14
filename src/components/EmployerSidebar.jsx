@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, MapPin, ClipboardCheck, CalendarOff, DollarSign, BarChart3, Settings, LogOut, Sprout, FileText, Map, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, Users, MapPin, ClipboardCheck, CalendarOff, DollarSign, BarChart3, Settings, LogOut, Sprout, FileText, Map, CalendarDays, CreditCard } from 'lucide-react';
 
 
 import { base44 } from '@/api/base44Client';
@@ -17,6 +17,7 @@ const navItems = [
   { path: '/reports', icon: BarChart3, label: 'Reports' },
   { path: '/tax-forms', icon: FileText, label: 'Tax & HR Forms' },
   { path: '/settings', icon: Settings, label: 'Settings' },
+  { path: '/billing', icon: CreditCard, label: 'Billing' },
 ];
 
 export default function EmployerSidebar({ user }) {
