@@ -108,29 +108,26 @@ export default function ClockPage() {
     setLastPunch(created);
     setSubmitting(false);
 
-    // On clock-in: create a TimeEntry for today with the captured GPS location
-    if (punchType === 'clock_in' && position?.latitude && position?.longitude) {
+    // On clock-in: create or update a TimeEntry for today
+    if (punchType === 'clock_in') {
       const today = new Date().toISOString().split('T')[0];
       const existing = await base44.entities.TimeEntry.filter({ worker_email: user.email, date: today });
+      const entryData = {
+        clock_in: now,
+        site_id: selectedSite || undefined,
+        site_name: site?.name || undefined,
+        ...(position?.latitude && { clock_in_latitude: position.latitude }),
+        ...(position?.longitude && { clock_in_longitude: position.longitude }),
+      };
       if (existing.length > 0) {
-        await base44.entities.TimeEntry.update(existing[0].id, {
-          clock_in: now,
-          clock_in_latitude: position.latitude,
-          clock_in_longitude: position.longitude,
-          site_id: selectedSite || undefined,
-          site_name: site?.name || undefined,
-        });
+        await base44.entities.TimeEntry.update(existing[0].id, entryData);
       } else {
         await base44.entities.TimeEntry.create({
           worker_email: user.email,
           worker_name: user.full_name || profile?.full_name || user.email,
           date: today,
-          clock_in: now,
-          clock_in_latitude: position.latitude,
-          clock_in_longitude: position.longitude,
-          site_id: selectedSite || undefined,
-          site_name: site?.name || undefined,
           status: 'pending',
+          ...entryData,
         });
       }
     }
