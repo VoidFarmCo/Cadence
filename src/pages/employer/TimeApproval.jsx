@@ -133,32 +133,32 @@ export default function TimeApproval() {
                   <td className="px-5 py-3 text-sm hidden sm:table-cell">
                     <span>{formatHours(entry.total_hours)}</span>
                     {entry.overtime_hours > 0 && (
-                      <span className="text-xs text-warning ml-1">+{formatHours(entry.overtime_hours)} OT</span>
+                      <span className="text-sm text-warning ml-1">+{formatHours(entry.overtime_hours)} OT</span>
                     )}
                   </td>
                   <td className="px-5 py-3 text-sm text-muted-foreground hidden md:table-cell">{entry.site_name || '—'}</td>
                   <td className="px-5 py-3 hidden lg:table-cell">
                     <div className="flex gap-1">
                       {entry.has_exception && (
-                        <Badge variant="outline" className="text-[10px] border-warning text-warning gap-1">
+                        <Badge variant="outline" className="text-xs border-warning text-warning gap-1">
                           <AlertTriangle className="w-3 h-3" />Exception
                         </Badge>
                       )}
                     </div>
                   </td>
                   <td className="px-5 py-3">
-                    <Badge variant="secondary" className={`text-[10px] capitalize ${statusColors[entry.status] || ''}`}>
+                    <Badge variant="secondary" className={`text-xs capitalize ${statusColors[entry.status] || ''}`}>
                       {entry.status}
                     </Badge>
                   </td>
                   <td className="px-5 py-3">
                     {entry.status === 'submitted' && (
-                      <div className="flex items-center justify-end gap-1">
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-success hover:bg-success/10" onClick={() => handleApprove(entry)}>
-                          <Check className="w-4 h-4" />
+                      <div className="flex items-center justify-end gap-2">
+                        <Button size="icon" variant="ghost" className="h-10 w-10 text-success hover:bg-success/10" onClick={() => handleApprove(entry)} title="Approve">
+                          <Check className="w-5 h-5" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => setEditDialog(entry)}>
-                          <X className="w-4 h-4" />
+                        <Button size="icon" variant="ghost" className="h-10 w-10 text-destructive hover:bg-destructive/10" onClick={() => setEditDialog(entry)} title="Reject">
+                          <X className="w-5 h-5" />
                         </Button>
                       </div>
                     )}

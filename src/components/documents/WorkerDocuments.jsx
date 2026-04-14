@@ -86,8 +86,8 @@ export default function WorkerDocuments({ worker, readOnly = false }) {
         {!readOnly && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs">
-                <Plus className="w-3 h-3" />Upload
+              <Button size="sm" variant="outline" className="gap-1.5 h-9 min-w-11">
+                <Plus className="w-4 h-4" />Upload
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -135,7 +135,7 @@ export default function WorkerDocuments({ worker, readOnly = false }) {
           <div className="w-5 h-5 border-2 border-muted border-t-primary rounded-full animate-spin" />
         </div>
       ) : docs.length === 0 ? (
-        <p className="text-xs text-muted-foreground py-3 text-center">No documents uploaded yet.</p>
+        <p className="text-sm text-muted-foreground py-3 text-center">No documents uploaded yet.</p>
       ) : (
         <div className="space-y-2">
           {docs.map(doc => (
@@ -143,32 +143,32 @@ export default function WorkerDocuments({ worker, readOnly = false }) {
               <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{doc.title}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <Badge variant="secondary" className={`text-[10px] ${DOC_COLORS[doc.doc_type] || ''}`}>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <Badge variant="secondary" className={`text-xs ${DOC_COLORS[doc.doc_type] || ''}`}>
                     {doc.doc_type}
                   </Badge>
                   {doc.expiry_date && (
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       Exp: {format(new Date(doc.expiry_date), 'MMM d, yyyy')}
                     </span>
                   )}
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {format(new Date(doc.created_date), 'MMM d, yyyy')}
                   </span>
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                  <Button size="icon" variant="ghost" className="h-7 w-7">
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </Button>
-                </a>
-                {!readOnly && (
-                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(doc)}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                )}
-              </div>
+                 <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                   <Button size="icon" variant="ghost" className="h-10 w-10" title="Open document">
+                     <ExternalLink className="w-5 h-5" />
+                   </Button>
+                 </a>
+                 {!readOnly && (
+                   <Button size="icon" variant="ghost" className="h-10 w-10 text-destructive hover:text-destructive" onClick={() => handleDelete(doc)} title="Delete">
+                     <Trash2 className="w-5 h-5" />
+                   </Button>
+                 )}
+               </div>
             </div>
           ))}
         </div>
