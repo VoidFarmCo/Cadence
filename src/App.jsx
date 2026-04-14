@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -29,7 +30,18 @@ import TimeOffPage from './pages/worker/TimeOffPage';
 import ExpensesPage from './pages/worker/ExpensesPage';
 import ProfilePage from './pages/worker/ProfilePage';
 
+function useDarkMode() {
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = (dark) => document.documentElement.classList.toggle('dark', dark);
+    apply(mq.matches);
+    mq.addEventListener('change', e => apply(e.matches));
+    return () => mq.removeEventListener('change', e => apply(e.matches));
+  }, []);
+}
+
 const AuthenticatedApp = () => {
+  useDarkMode();
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
   // Show loading spinner while checking app public settings or auth

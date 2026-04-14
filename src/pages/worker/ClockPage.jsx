@@ -19,6 +19,7 @@ export default function ClockPage() {
   const [pendingPunchType, setPendingPunchType] = useState(null);
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -100,8 +101,12 @@ export default function ClockPage() {
       synced_at: isOffline ? undefined : now,
     };
 
+    // Optimistic update: immediately reflect the punch in UI
+    setLastPunch({ ...punchData, id: `temp-${now}` });
+    setSubmitting(true);
     const created = await base44.entities.Punch.create(punchData);
     setLastPunch(created);
+    setSubmitting(false);
     toast.success(`${punchType.replace('_', ' ')} recorded!`);
   }
 
@@ -151,8 +156,9 @@ export default function ClockPage() {
 
       {/* Punch Button */}
       <button
-        onClick={() => handlePunch(nextPunch)}
-        className={`relative w-40 h-40 rounded-full ${punch.color} flex flex-col items-center justify-center shadow-lg active:scale-95 transition-all duration-150`}
+        onClick={() => !submitting && handlePunch(nextPunch)}
+        disabled={submitting}
+        className={`relative w-40 h-40 rounded-full ${punch.color} flex flex-col items-center justify-center shadow-lg active:scale-95 transition-all duration-150 disabled:opacity-70`}
       >
         <div className="absolute inset-0 rounded-full animate-pulse-ring opacity-20" style={{ backgroundColor: 'currentColor' }} />
         <PunchIcon className="w-10 h-10 mb-2" />

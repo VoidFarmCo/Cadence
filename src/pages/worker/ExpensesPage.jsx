@@ -43,13 +43,31 @@ export default function ExpensesPage() {
   async function handleSubmit() {
     if (!form.amount || !form.date) { toast.error('Amount and date required'); return; }
     setSubmitting(true);
+
+    // Optimistic update
+    const optimisticId = `temp-${Date.now()}`;
+    const optimisticExpense = {
+      id: optimisticId,
+      worker_email: user.email,
+      category: form.category,
+      amount: parseFloat(form.amount),
+      date: form.date,
+      notes: form.notes,
+      status: 'pending',
+      _optimistic: true,
+    };
+    setExpenses(prev => [optimisticExpense, ...prev]);
+    setDialogOpen(false);
+    setForm({ category: 'fuel', amount: '', date: '', notes: '' });
+    setReceiptFile(null);
+
     let receiptUrl;
     if (receiptFile) {
       const { file_url } = await base44.integrations.Core.UploadFile({ file: receiptFile });
       receiptUrl = file_url;
     }
     const profiles = await base44.entities.WorkerProfile.filter({ user_email: user.email });
-    await base44.entities.Expense.create({
+    const created = await base44.entities.Expense.create({
       worker_email: user.email,
       worker_name: user.full_name || profiles[0]?.full_name,
       category: form.category,
@@ -59,13 +77,10 @@ export default function ExpensesPage() {
       receipt_url: receiptUrl,
       status: 'pending'
     });
+    // Replace optimistic entry with real one
+    setExpenses(prev => prev.map(e => e.id === optimisticId ? created : e));
     toast.success('Expense added');
-    setDialogOpen(false);
-    setForm({ category: 'fuel', amount: '', date: '', notes: '' });
-    setReceiptFile(null);
     setSubmitting(false);
-    const exps = await base44.entities.Expense.filter({ worker_email: user.email }, '-date');
-    setExpenses(exps);
   }
 
   const total = expenses.reduce((s, e) => s + (e.amount || 0), 0);
