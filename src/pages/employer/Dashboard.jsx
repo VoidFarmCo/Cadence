@@ -6,6 +6,8 @@ import { formatHours, formatDate } from '@/lib/timeUtils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import MessageBroadcast from '@/components/messaging/MessageBroadcast';
+import DirectMessage from '@/components/messaging/DirectMessage';
 
 export default function Dashboard() {
   const [workers, setWorkers] = useState([]);
@@ -86,9 +88,14 @@ export default function Dashboard() {
         />
       </div>
 
+      <div className="flex gap-3 mb-4">
+        <MessageBroadcast workers={workers} />
+        <DirectMessage workers={workers} />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
-        <div className="bg-card rounded-xl border border-border">
+         {/* Recent Activity */}
+         <div className="bg-card rounded-xl border border-border">
           <div className="p-5 border-b border-border flex items-center justify-between">
             <h2 className="text-sm font-semibold">Recent Punches</h2>
             <Link to="/time-approval">

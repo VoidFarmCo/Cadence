@@ -5,6 +5,7 @@ import PullToRefresh from '@/components/PullToRefresh';
 import { Clock, CalendarDays, CalendarOff, FileText, Receipt, TrendingUp, ChevronRight, AlertCircle } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { formatHours } from '@/lib/timeUtils';
+import WorkerMessages from '@/components/messaging/WorkerMessages';
 
 async function fetchData(email) {
   const now = new Date();
@@ -137,15 +138,18 @@ export default function WorkerHome() {
         )}
 
         {nextShift && (
-          <div className="bg-info/5 border border-info/20 rounded-xl p-4">
-            <p className="text-xs font-semibold text-info uppercase tracking-wide mb-1">Next Shift</p>
-            <p className="text-sm font-semibold text-foreground">
-              {format(parseISO(nextShift.date), 'EEEE, MMM d')}
-              {nextShift.start_time && ` · ${nextShift.start_time}${nextShift.end_time ? ` – ${nextShift.end_time}` : ''}`}
-            </p>
-            {nextShift.site_name && <p className="text-xs text-muted-foreground mt-0.5">{nextShift.site_name}</p>}
-          </div>
+           <div className="bg-info/5 border border-info/20 rounded-xl p-4">
+             <p className="text-xs font-semibold text-info uppercase tracking-wide mb-1">Next Shift</p>
+             <p className="text-sm font-semibold text-foreground">
+               {format(parseISO(nextShift.date), 'EEEE, MMM d')}
+               {nextShift.start_time && ` · ${nextShift.start_time}${nextShift.end_time ? ` – ${nextShift.end_time}` : ''}`}
+             </p>
+             {nextShift.site_name && <p className="text-xs text-muted-foreground mt-0.5">{nextShift.site_name}</p>}
+           </div>
         )}
+
+        {/* Messages */}
+        <WorkerMessages />
 
         {/* Quick links */}
         <div className="space-y-2">
