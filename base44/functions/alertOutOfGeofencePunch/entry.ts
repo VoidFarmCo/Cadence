@@ -4,12 +4,11 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
-    // Verify admin-only access for direct invocations or system automations
+    // Verify authentication and admin role (required for entity automations)
     const user = await base44.auth.me().catch(() => null);
-    if (user && user.role !== 'admin') {
+    if (!user || user.role !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
-    // For entity automations, the platform provides automatic authentication
     
     const payload = await req.json();
     const punch = payload.data;
