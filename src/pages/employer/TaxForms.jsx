@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileText, Plus, CheckCircle2, Clock, AlertCircle, Eye } from 'lucide-react';
+import { FileText, Plus, CheckCircle2, Clock, AlertCircle, Eye, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 
 const FORM_TEMPLATES = {
@@ -270,6 +270,7 @@ export default function TaxForms() {
           {showView?.response_data && (() => {
             const data = JSON.parse(showView.response_data);
             const fields = JSON.parse(showView.fields_config || '[]');
+            const uploadedUrl = data._uploaded_file_url;
             return (
               <div className="space-y-3 py-2">
                 {fields.map(f => (
@@ -280,6 +281,20 @@ export default function TaxForms() {
                     </p>
                   </div>
                 ))}
+                {uploadedUrl && (
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-medium text-muted-foreground">Uploaded Document</p>
+                    <a
+                      href={uploadedUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md px-3 py-2 hover:bg-primary/10 transition-colors"
+                    >
+                      <Paperclip className="w-4 h-4 shrink-0" />
+                      View Attached Document
+                    </a>
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground mt-2">
                   Submitted {showView.completed_at ? format(new Date(showView.completed_at), 'MMM d, yyyy h:mm a') : ''}
                 </p>

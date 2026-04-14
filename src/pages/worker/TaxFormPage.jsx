@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { FileText, CheckCircle2, Clock, ChevronRight } from 'lucide-react';
+import { FileText, CheckCircle2, Clock, ChevronRight, Upload, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function TaxFormPage() {
@@ -17,6 +17,9 @@ export default function TaxFormPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadedFileUrl, setUploadedFileUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -33,6 +36,18 @@ export default function TaxFormPage() {
     setActive(form);
     setResponses({});
     setSubmitted(false);
+    setUploadedFile(null);
+    setUploadedFileUrl('');
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadedFile(file);
+    setUploading(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setUploadedFileUrl(file_url);
+    setUploading(false);
   };
 
   const handleSubmit = async () => {
@@ -40,7 +55,7 @@ export default function TaxFormPage() {
     await base44.entities.TaxForm.update(active.id, {
       status: 'completed',
       completed_at: new Date().toISOString(),
-      response_data: JSON.stringify(responses),
+      response_data: JSON.stringify({ ...responses, _uploaded_file_url: uploadedFileUrl || undefined }),
     });
     const updated = await base44.entities.TaxForm.filter({ worker_email: userEmail });
     setForms(updated);
@@ -49,10 +64,11 @@ export default function TaxFormPage() {
   };
 
   const fields = active ? JSON.parse(active.fields_config || '[]') : [];
-  const allRequired = fields.filter(f => f.required).every(f => {
+  const fieldsAllRequired = fields.filter(f => f.required).every(f => {
     if (f.type === 'checkbox') return responses[f.key] === true;
     return responses[f.key] && String(responses[f.key]).trim() !== '';
   });
+  const allRequired = fieldsAllRequired || (fields.length === 0 && (uploadedFileUrl || Object.keys(responses).length > 0));
 
   const pending = forms.filter(f => f.status === 'pending');
   const completed = forms.filter(f => f.status === 'completed');
@@ -153,9 +169,33 @@ export default function TaxFormPage() {
                 ))}
               </div>
 
+              {/* Document Upload */}
+              <div className="space-y-2">
+                <Label className="text-sm">{fields.length > 0 ? 'Attach a Document (optional)' : 'Upload Completed Document'}{fields.length === 0 && <span className="text-destructive ml-1">*</span>}</Label>
+                {uploadedFileUrl ? (
+                  <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2.5">
+                    <FileText className="w-4 h-4 text-green-600 shrink-0" />
+                    <span className="text-sm text-green-800 truncate flex-1">{uploadedFile?.name}</span>
+                    <button onClick={() => { setUploadedFile(null); setUploadedFileUrl(''); }}>
+                      <X className="w-4 h-4 text-green-600 hover:text-destructive" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center gap-2 border-2 border-dashed border-border rounded-lg p-5 cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors">
+                    {uploading ? (
+                      <div className="w-5 h-5 border-2 border-muted border-t-primary rounded-full animate-spin" />
+                    ) : (
+                      <Upload className="w-5 h-5 text-muted-foreground" />
+                    )}
+                    <span className="text-sm text-muted-foreground">{uploading ? 'Uploading…' : 'Tap to upload PDF, image, or document'}</span>
+                    <input type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" onChange={handleFileChange} disabled={uploading} />
+                  </label>
+                )}
+              </div>
+
               <Button
                 className="w-full"
-                disabled={!allRequired || submitting}
+                disabled={(!allRequired && !uploadedFileUrl) || submitting || uploading}
                 onClick={handleSubmit}
               >
                 {submitting ? 'Submitting…' : 'Submit Form'}
