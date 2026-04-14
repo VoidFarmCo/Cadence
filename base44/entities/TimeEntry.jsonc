@@ -79,10 +79,61 @@
     "edit_reason": {
       "type": "string",
       "title": "Edit Reason"
+    },
+    "clock_in_latitude": {
+      "type": "number",
+      "title": "Clock-In Latitude"
+    },
+    "clock_in_longitude": {
+      "type": "number",
+      "title": "Clock-In Longitude"
     }
   },
   "required": [
     "worker_email",
     "date"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.worker_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.worker_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

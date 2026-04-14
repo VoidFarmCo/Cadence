@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Send } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Send, MapPin } from 'lucide-react';
 import { formatHours, formatTime, formatDate, getWeekRange } from '@/lib/timeUtils';
 import { format, addDays, subDays, startOfWeek, parseISO, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
@@ -121,19 +121,32 @@ export default function TimesheetPage() {
                 <p className="text-sm font-bold">{dayTotal > 0 ? formatHours(dayTotal) : '—'}</p>
               </div>
               {dayEntries.map(entry => (
-                <div key={entry.id} className="flex items-center justify-between py-1.5 border-t border-border mt-2">
-                  <div className="text-xs text-muted-foreground">
-                    {formatTime(entry.clock_in)} – {formatTime(entry.clock_out)}
-                    {entry.break_minutes > 0 && <span className="ml-2">({entry.break_minutes}m break)</span>}
+                <div key={entry.id} className="py-1.5 border-t border-border mt-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">
+                      {formatTime(entry.clock_in)} – {formatTime(entry.clock_out)}
+                      {entry.break_minutes > 0 && <span className="ml-2">({entry.break_minutes}m break)</span>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {entry.has_exception && (
+                        <Badge variant="outline" className="text-[9px] border-warning text-warning">Exception</Badge>
+                      )}
+                      <Badge variant="secondary" className={`text-[9px] capitalize ${statusColors[entry.status] || ''}`}>
+                        {entry.status}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {entry.has_exception && (
-                      <Badge variant="outline" className="text-[9px] border-warning text-warning">Exception</Badge>
-                    )}
-                    <Badge variant="secondary" className={`text-[9px] capitalize ${statusColors[entry.status] || ''}`}>
-                      {entry.status}
-                    </Badge>
-                  </div>
+                  {entry.clock_in_latitude && entry.clock_in_longitude && (
+                    <a
+                      href={`https://www.google.com/maps?q=${entry.clock_in_latitude},${entry.clock_in_longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 mt-1 text-[10px] text-primary hover:underline"
+                    >
+                      <MapPin className="w-3 h-3" />
+                      Clock-in location: {entry.clock_in_latitude.toFixed(5)}, {entry.clock_in_longitude.toFixed(5)}
+                    </a>
+                  )}
                 </div>
               ))}
               {dayEntries.length === 0 && (
