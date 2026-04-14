@@ -14,6 +14,7 @@ export default function PayrollRuns() {
   const [stepperOpen, setStepperOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -37,6 +38,8 @@ export default function PayrollRuns() {
   }
 
   async function handleSubmitRun() {
+    if (submitting) return;
+    setSubmitting(true);
     const me = await base44.auth.me();
     await base44.entities.PayrollRun.create({
       pay_period_id: selectedPeriod.id,
@@ -54,6 +57,7 @@ export default function PayrollRuns() {
     });
     setCurrentStep(4);
     toast.success('Payroll run submitted');
+    setSubmitting(false);
   }
 
   const statusColors = {
@@ -191,8 +195,8 @@ export default function PayrollRuns() {
             {currentStep === 3 && (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">Ready to submit approved hours to QuickBooks Payroll. This will create payroll entries for all mapped workers.</p>
-                <Button onClick={handleSubmitRun} className="w-full gap-2">
-                  <DollarSign className="w-4 h-4" />Submit to QuickBooks
+                <Button onClick={handleSubmitRun} disabled={submitting} className="w-full gap-2">
+                  <DollarSign className="w-4 h-4" />{submitting ? 'Submitting…' : 'Submit to QuickBooks'}
                 </Button>
               </div>
             )}

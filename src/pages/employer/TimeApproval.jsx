@@ -57,7 +57,7 @@ export default function TimeApproval() {
     const me = await base44.auth.me();
     await base44.entities.TimeEntry.update(entry.id, { status: 'rejected', edit_reason: editReason });
     await base44.entities.AuditLog.create({
-      action: 'rejection',
+      action: 'approval',
       entity_type: 'TimeEntry',
       entity_id: entry.id,
       performed_by: me.email,

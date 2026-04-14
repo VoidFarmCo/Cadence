@@ -64,8 +64,7 @@ Deno.serve(async (req) => {
       if (accounts.length > 0) {
         await base44.asServiceRole.entities.Account.update(accounts[0].id, {
           stripe_subscription_status: 'cancelled',
-          status: 'locked',
-          lock_reason: 'payment_failed',
+          status: 'cancelled',
         });
         console.log(`Subscription cancelled for customer ${sub.customer}`);
       }
