@@ -7,6 +7,8 @@ import { useState } from 'react';
 export default function AppPreview() {
   const navigate = useNavigate();
   const [selectedSection, setSelectedSection] = useState(null);
+  const [selectedManager, setSelectedManager] = useState(null);
+  const [selectedWorker, setSelectedWorker] = useState(null);
 
   // Apple-style mobile phone mockup component
   const PhoneMockup = ({ title, children }) => (
@@ -198,22 +200,22 @@ export default function AppPreview() {
                     </div>
                   </div>
 
-                  <Button className="w-full" size="sm" onClick={() => setSelectedSection('manager-timesheets')}>Review Timesheets</Button>
+                  <Button className="w-full" size="sm" onClick={() => setSelectedManager('timesheets')}>Review Timesheets</Button>
 
                   <div className="bg-secondary rounded-lg p-3 text-xs mt-2">
                     <p className="font-semibold mb-1">Team Hours This Week</p>
                     <p className="text-lg font-bold">156 hrs</p>
                   </div>
 
-                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedSection('manager-schedule')}>Team Schedule</Button>
-                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedSection('manager-timeoff')}>Time Off Requests</Button>
+                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedManager('schedule')}>Team Schedule</Button>
+                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedManager('timeoff')}>Time Off Requests</Button>
 
-                  {selectedSection?.startsWith('manager-') && (
+                  {selectedManager && (
                     <div className="mt-2 p-2 bg-secondary rounded text-xs border-l-2 border-primary">
                       <p className="font-semibold">
-                        {selectedSection === 'manager-timesheets' && '✅ Review Timesheets'}
-                        {selectedSection === 'manager-schedule' && '📅 Team Schedule'}
-                        {selectedSection === 'manager-timeoff' && '🏖️ Time Off Requests'}
+                        {selectedManager === 'timesheets' && '✅ Review Timesheets'}
+                        {selectedManager === 'schedule' && '📅 Team Schedule'}
+                        {selectedManager === 'timeoff' && '🏖️ Time Off Requests'}
                       </p>
                     </div>
                   )}
@@ -255,16 +257,16 @@ export default function AppPreview() {
                     </div>
                   </div>
 
-                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedSection('worker-timesheet')}>View Timesheet</Button>
-                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedSection('worker-timeoff')}>Request Time Off</Button>
-                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedSection('worker-tax')}>Tax Forms</Button>
+                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedWorker('timesheet')}>View Timesheet</Button>
+                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedWorker('timeoff')}>Request Time Off</Button>
+                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedWorker('tax')}>Tax Forms</Button>
 
-                  {selectedSection?.startsWith('worker-') && (
+                  {selectedWorker && (
                     <div className="mt-2 p-2 bg-secondary rounded text-xs border-l-2 border-primary">
                       <p className="font-semibold">
-                        {selectedSection === 'worker-timesheet' && '⏱️ View Timesheet'}
-                        {selectedSection === 'worker-timeoff' && '🏖️ Request Time Off'}
-                        {selectedSection === 'worker-tax' && '📄 Tax Forms'}
+                        {selectedWorker === 'timesheet' && '⏱️ View Timesheet'}
+                        {selectedWorker === 'timeoff' && '🏖️ Request Time Off'}
+                        {selectedWorker === 'tax' && '📄 Tax Forms'}
                       </p>
                     </div>
                   )}
