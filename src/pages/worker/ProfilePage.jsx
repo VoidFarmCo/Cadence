@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { DollarSign, MapPin, LogOut, Shield, Smartphone, AlertTriangle } from 'lucide-react';
+import { DollarSign, MapPin, LogOut, Shield, Smartphone, AlertTriangle, Pencil, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { useEffect } from 'react';
 import WorkerDocuments from '@/components/documents/WorkerDocuments';
 
 export default function ProfilePage() {
@@ -15,6 +15,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
+  const [editingInfo, setEditingInfo] = useState(false);
+  const [infoForm, setInfoForm] = useState({ full_name: '', phone: '' });
 
   useEffect(() => {
     async function load() {
@@ -22,10 +24,19 @@ export default function ProfilePage() {
       setUser(me);
       const profiles = await base44.entities.WorkerProfile.filter({ user_email: me.email });
       setProfile(profiles[0]);
+      if (profiles[0]) setInfoForm({ full_name: profiles[0].full_name || '', phone: profiles[0].phone || '' });
       setLoading(false);
     }
     load();
   }, []);
+
+  async function savePersonalInfo() {
+    if (!infoForm.full_name.trim()) { toast.error('Name is required'); return; }
+    await base44.entities.WorkerProfile.update(profile.id, { full_name: infoForm.full_name, phone: infoForm.phone });
+    setProfile(prev => ({ ...prev, full_name: infoForm.full_name, phone: infoForm.phone }));
+    setEditingInfo(false);
+    toast.success('Profile updated');
+  }
 
   async function updatePayPreference(value) {
     if (profile) {
@@ -50,17 +61,44 @@ export default function ProfilePage() {
 
       {/* User Info */}
       <div className="bg-card rounded-xl border border-border p-5">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary">
-            {user?.full_name?.charAt(0) || 'U'}
+        <div className="flex items-start gap-4">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary shrink-0">
+            {(profile?.full_name || user?.full_name)?.charAt(0) || 'U'}
           </div>
-          <div>
-            <p className="text-lg font-semibold">{user?.full_name || 'User'}</p>
-            <p className="text-sm text-muted-foreground">{user?.email}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge variant="outline" className="text-xs capitalize">{user?.role || 'worker'}</Badge>
-              {profile && <Badge variant="outline" className="text-xs capitalize">{profile.worker_type}</Badge>}
-            </div>
+          <div className="flex-1 min-w-0">
+            {editingInfo ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Full Name</Label>
+                  <Input value={infoForm.full_name} onChange={e => setInfoForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Full Name" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Phone</Label>
+                  <Input value={infoForm.phone} onChange={e => setInfoForm(f => ({ ...f, phone: e.target.value }))} placeholder="(505) 555-1234" />
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={savePersonalInfo} className="gap-1"><Check className="w-3.5 h-3.5" />Save</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setEditingInfo(false); setInfoForm({ full_name: profile?.full_name || '', phone: profile?.phone || '' }); }} className="gap-1"><X className="w-3.5 h-3.5" />Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between">
+                  <p className="text-lg font-semibold">{profile?.full_name || user?.full_name || 'User'}</p>
+                  {profile && (
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingInfo(true)}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                {profile?.phone && <p className="text-sm text-muted-foreground">{profile.phone}</p>}
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className="text-xs capitalize">{user?.role || 'worker'}</Badge>
+                  {profile && <Badge variant="outline" className="text-xs capitalize">{profile.worker_type}</Badge>}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
