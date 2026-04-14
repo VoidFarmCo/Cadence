@@ -1,4 +1,3 @@
-import { Sprout } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Link } from 'react-router-dom';
@@ -10,9 +9,9 @@ export default function MobileHeader({ user, isAdmin }) {
       <div className="flex items-center justify-between h-14 px-4">
         <Link to="/" className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Sprout className="w-4 h-4 text-primary-foreground" />
+            <span className="text-xs font-bold text-primary-foreground">⚡</span>
           </div>
-          <span className="text-sm font-bold font-display tracking-tight">FieldClock</span>
+          <span className="text-sm font-bold font-display tracking-tight">Cadence</span>
         </Link>
         <div className="flex items-center gap-3">
           <NotificationBell user={user} isAdmin={isAdmin} />

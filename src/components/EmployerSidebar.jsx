@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, MapPin, ClipboardCheck, CalendarOff, DollarSign, BarChart3, Settings, LogOut, Sprout, FileText, Map, CalendarDays, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Users, MapPin, ClipboardCheck, CalendarOff, DollarSign, BarChart3, Settings, LogOut, FileText, Map, CalendarDays, CreditCard } from 'lucide-react';
 
 
 import { base44 } from '@/api/base44Client';
@@ -28,10 +28,10 @@ export default function EmployerSidebar({ user }) {
       <div className="p-6 border-b border-sidebar-border">
         <Link to="/" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center">
-            <Sprout className="w-5 h-5 text-sidebar-primary-foreground" />
+            <span className="text-xs font-bold text-sidebar-primary-foreground">⚡</span>
           </div>
           <div>
-            <h1 className="text-sm font-bold text-sidebar-foreground font-display tracking-tight">FieldClock</h1>
+            <h1 className="text-sm font-bold text-sidebar-foreground font-display tracking-tight">Cadence</h1>
             <p className="text-[11px] text-sidebar-foreground/50">Workforce Management</p>
           </div>
         </Link>
