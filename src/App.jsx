@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 import RoleRouter from './pages/RoleRouter';
+import AppPreview from './pages/AppPreview';
 import EmployerLayout from './components/EmployerLayout';
 import WorkerLayout from './components/WorkerLayout';
 import Dashboard from './pages/employer/Dashboard';
@@ -69,6 +70,7 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       <Route path="/" element={<RoleRouter />} />
+      <Route path="/app-preview" element={<AppPreview />} />
       {/* Employer Routes */}
       <Route element={<EmployerLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
