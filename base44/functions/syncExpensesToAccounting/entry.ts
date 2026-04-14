@@ -3,7 +3,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const { payroll_run_id } = await req.json();
+    const payload = await req.json();
+    const payroll_run_id = payload.payroll_run_id || payload.event?.entity_id;
 
     if (!payroll_run_id) {
       return Response.json({ error: 'payroll_run_id required' }, { status: 400 });
