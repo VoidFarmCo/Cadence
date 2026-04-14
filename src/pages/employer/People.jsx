@@ -183,6 +183,7 @@ export default function People() {
         worker={selectedWorker}
         open={!!selectedWorker}
         onClose={() => setSelectedWorker(null)}
+        onDeleted={() => { setSelectedWorker(null); loadWorkers(); }}
       />
     </div>
   );

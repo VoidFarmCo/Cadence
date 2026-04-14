@@ -1,12 +1,28 @@
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Shield } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Shield, Trash2 } from 'lucide-react';
 import WorkerDocuments from './WorkerDocuments';
+import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 
 const statusColors = { active: 'bg-success/10 text-success', inactive: 'bg-muted text-muted-foreground', pending: 'bg-warning/10 text-warning' };
 const roleLabels = { owner: 'Owner', payroll_admin: 'Payroll Admin', manager: 'Manager', worker: 'Worker' };
 
-export default function WorkerDetailModal({ worker, open, onClose }) {
+export default function WorkerDetailModal({ worker, open, onClose, onDeleted }) {
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    setDeleting(true);
+    await base44.entities.WorkerProfile.delete(worker.id);
+    toast.success(`${worker.full_name} has been removed`);
+    setDeleting(false);
+    onClose();
+    if (onDeleted) onDeleted();
+  }
+
   if (!worker) return null;
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
@@ -67,6 +83,30 @@ export default function WorkerDetailModal({ worker, open, onClose }) {
           <div className="bg-card rounded-xl border border-border p-4">
             <WorkerDocuments worker={worker} readOnly={false} />
           </div>
+
+          {/* Danger Zone */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="w-full gap-2" disabled={deleting}>
+                <Trash2 className="w-4 h-4" />
+                Remove {worker.worker_type === 'contractor' ? 'Contractor' : 'Worker'}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove {worker.full_name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete their profile and cannot be undone. Their time entries and records will remain.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Yes, Remove
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </DialogContent>
     </Dialog>
