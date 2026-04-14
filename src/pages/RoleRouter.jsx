@@ -23,6 +23,6 @@ export default function RoleRouter() {
     );
   }
 
-  const isEmployer = role === 'owner' || role === 'payroll_admin' || role === 'manager';
+  const isEmployer = role === 'admin';
   return <Navigate to={isEmployer ? '/dashboard' : '/worker-home'} replace />;
 }

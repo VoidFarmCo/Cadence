@@ -17,11 +17,12 @@ export default function useCurrentUser() {
     load();
   }, []);
 
-  const isEmployer = user?.role === 'owner' || user?.role === 'payroll_admin' || user?.role === 'manager';
-  const isOwner = user?.role === 'owner';
-  const isPayrollAdmin = user?.role === 'payroll_admin' || user?.role === 'owner';
-  const isManager = user?.role === 'manager' || isPayrollAdmin;
-  const isWorker = user?.role === 'worker';
+  const workerRole = profile?.role; // 'owner' | 'payroll_admin' | 'manager' | 'worker'
+  const isEmployer = user?.role === 'admin';
+  const isOwner = workerRole === 'owner';
+  const isPayrollAdmin = workerRole === 'payroll_admin' || workerRole === 'owner';
+  const isManager = workerRole === 'manager' || isPayrollAdmin;
+  const isWorker = user?.role === 'user';
   const isContractor = profile?.worker_type === 'contractor';
 
   return { user, profile, loading, isEmployer, isOwner, isPayrollAdmin, isManager, isWorker, isContractor };
