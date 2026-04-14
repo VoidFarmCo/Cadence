@@ -43,7 +43,7 @@ export default function AppPreview() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-20">
         {/* Admin Dashboard */}
         <section>
-          <h2 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h2>
+          <h2 className="text-3xl font-bold text-foreground mb-2">Cadence Admin Dashboard</h2>
           <p className="text-muted-foreground mb-8">Full control over workforce operations</p>
           
           <div className="bg-card border rounded-lg overflow-hidden shadow-lg">
@@ -152,11 +152,11 @@ export default function AppPreview() {
           <h2 className="text-3xl font-bold text-foreground mb-8">Manager & Employee Dashboards</h2>
           
           <div className="grid md:grid-cols-2 gap-8">
-            {/* Manager */}
-            <div>
-              <h3 className="text-lg font-semibold text-foreground mb-3">Manager</h3>
-              <p className="text-sm text-muted-foreground mb-4">Oversee your team and approve timesheets</p>
-              <PhoneMockup title="Manager">
+           {/* Manager */}
+           <div>
+             <h3 className="text-lg font-semibold text-foreground mb-3">Cadence Manager</h3>
+             <p className="text-sm text-muted-foreground mb-4">Oversee your team and approve timesheets</p>
+             <PhoneMockup title="Cadence">
                 <div className="h-full flex flex-col bg-background p-4 space-y-3 overflow-y-auto">
                   <div className="flex justify-between items-center pt-2">
                     <h3 className="font-bold">My Team</h3>
@@ -192,7 +192,7 @@ export default function AppPreview() {
 
             {/* Employee */}
             <div>
-              <h3 className="text-lg font-semibold text-foreground mb-3">Employee</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">Cadence Worker</h3>
               <p className="text-sm text-muted-foreground mb-4">Clock in, track hours, and manage work</p>
               <PhoneMockup title="Cadence">
                 <div className="h-full flex flex-col bg-background p-4 space-y-4 overflow-y-auto">
