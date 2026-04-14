@@ -2,9 +2,11 @@ import { ArrowLeft, Clock, FileText, DollarSign, Users, CheckCircle2, Menu, LogO
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 
 export default function AppPreview() {
   const navigate = useNavigate();
+  const [selectedSection, setSelectedSection] = useState(null);
 
   // Apple-style mobile phone mockup component
   const PhoneMockup = ({ title, children }) => (
@@ -83,12 +85,31 @@ export default function AppPreview() {
 
               {/* Action Buttons */}
               <div className="grid grid-cols-5 gap-3">
-                <Button className="w-full">Process Payroll</Button>
-                <Button variant="outline" className="w-full">Manage Team</Button>
-                <Button variant="outline" className="w-full">Tax Compliance</Button>
-                <Button variant="outline" className="w-full">View Reports</Button>
-                <Button variant="outline" className="w-full">Settings</Button>
+                <Button className="w-full" onClick={() => setSelectedSection('payroll')}>Process Payroll</Button>
+                <Button variant="outline" className="w-full" onClick={() => setSelectedSection('team')}>Manage Team</Button>
+                <Button variant="outline" className="w-full" onClick={() => setSelectedSection('tax')}>Tax Compliance</Button>
+                <Button variant="outline" className="w-full" onClick={() => setSelectedSection('reports')}>View Reports</Button>
+                <Button variant="outline" className="w-full" onClick={() => setSelectedSection('settings')}>Settings</Button>
               </div>
+              
+              {selectedSection && (
+                <div className="mt-4 p-4 bg-secondary rounded-lg border-l-4 border-primary">
+                  <p className="font-semibold text-foreground mb-2">
+                    {selectedSection === 'payroll' && '💰 Process Payroll'}
+                    {selectedSection === 'team' && '👥 Manage Team'}
+                    {selectedSection === 'tax' && '📋 Tax Compliance'}
+                    {selectedSection === 'reports' && '📊 View Reports'}
+                    {selectedSection === 'settings' && '⚙️ Settings'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedSection === 'payroll' && 'Generate payroll for the current period, calculate taxes, and export to QuickBooks.'}
+                    {selectedSection === 'team' && 'Invite workers, manage roles, set pay rates, and track worker status.'}
+                    {selectedSection === 'tax' && 'Send tax forms to workers, track submissions, and manage compliance documents.'}
+                    {selectedSection === 'reports' && 'View analytics on hours worked, overtime, and team productivity metrics.'}
+                    {selectedSection === 'settings' && 'Configure company details, pay periods, overtime rules, and integrations.'}
+                  </p>
+                </div>
+              )}
 
               {/* Two Column Layout */}
               <div className="grid grid-cols-2 gap-6">
@@ -177,15 +198,25 @@ export default function AppPreview() {
                     </div>
                   </div>
 
-                  <Button className="w-full" size="sm">Review Timesheets</Button>
-                  
+                  <Button className="w-full" size="sm" onClick={() => setSelectedSection('manager-timesheets')}>Review Timesheets</Button>
+
                   <div className="bg-secondary rounded-lg p-3 text-xs mt-2">
                     <p className="font-semibold mb-1">Team Hours This Week</p>
                     <p className="text-lg font-bold">156 hrs</p>
                   </div>
 
-                  <Button variant="outline" className="w-full" size="sm">Team Schedule</Button>
-                  <Button variant="outline" className="w-full" size="sm">Time Off Requests</Button>
+                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedSection('manager-schedule')}>Team Schedule</Button>
+                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedSection('manager-timeoff')}>Time Off Requests</Button>
+
+                  {selectedSection?.startsWith('manager-') && (
+                    <div className="mt-2 p-2 bg-secondary rounded text-xs border-l-2 border-primary">
+                      <p className="font-semibold">
+                        {selectedSection === 'manager-timesheets' && '✅ Review Timesheets'}
+                        {selectedSection === 'manager-schedule' && '📅 Team Schedule'}
+                        {selectedSection === 'manager-timeoff' && '🏖️ Time Off Requests'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </PhoneMockup>
             </div>
@@ -224,9 +255,19 @@ export default function AppPreview() {
                     </div>
                   </div>
 
-                  <Button variant="outline" className="w-full" size="sm">View Timesheet</Button>
-                  <Button variant="outline" className="w-full" size="sm">Request Time Off</Button>
-                  <Button variant="outline" className="w-full" size="sm">Tax Forms</Button>
+                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedSection('worker-timesheet')}>View Timesheet</Button>
+                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedSection('worker-timeoff')}>Request Time Off</Button>
+                  <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedSection('worker-tax')}>Tax Forms</Button>
+
+                  {selectedSection?.startsWith('worker-') && (
+                    <div className="mt-2 p-2 bg-secondary rounded text-xs border-l-2 border-primary">
+                      <p className="font-semibold">
+                        {selectedSection === 'worker-timesheet' && '⏱️ View Timesheet'}
+                        {selectedSection === 'worker-timeoff' && '🏖️ Request Time Off'}
+                        {selectedSection === 'worker-tax' && '📄 Tax Forms'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </PhoneMockup>
             </div>
