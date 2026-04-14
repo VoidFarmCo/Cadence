@@ -173,7 +173,7 @@ export default function ProfilePage() {
       {/* Documents */}
       {profile && (
         <div className="bg-card rounded-xl border border-border p-5">
-          <WorkerDocuments worker={profile} readOnly={true} />
+          <WorkerDocuments worker={profile} readOnly={false} />
         </div>
       )}
 
