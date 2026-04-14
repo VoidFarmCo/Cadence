@@ -147,85 +147,90 @@ export default function AppPreview() {
           </div>
         </section>
 
-        {/* Manager Dashboard */}
+        {/* Manager & Employee Dashboards */}
         <section className="border-t pt-16">
-          <h2 className="text-3xl font-bold text-foreground mb-2">Manager Dashboard</h2>
-          <p className="text-muted-foreground mb-8">Oversee your team and approve timesheets</p>
+          <h2 className="text-3xl font-bold text-foreground mb-8">Manager & Employee Dashboards</h2>
           
-          <PhoneMockup title="Manager">
-            <div className="h-full flex flex-col bg-background p-4 space-y-3 overflow-y-auto">
-              <div className="flex justify-between items-center pt-2">
-                <h3 className="font-bold">My Team</h3>
-                <Menu className="w-5 h-5" />
-              </div>
-
-              <div className="bg-secondary rounded-lg p-3 text-sm">
-                <p className="font-semibold mb-2">Approvals Waiting</p>
-                <div className="space-y-1 text-xs">
-                  <div className="flex justify-between">
-                    <span>Sarah - 40 hrs</span>
-                    <span className="text-accent font-bold">Pending</span>
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Manager */}
+            <div>
+              <h3 className="text-lg font-semibold text-foreground mb-3">Manager</h3>
+              <p className="text-sm text-muted-foreground mb-4">Oversee your team and approve timesheets</p>
+              <PhoneMockup title="Manager">
+                <div className="h-full flex flex-col bg-background p-4 space-y-3 overflow-y-auto">
+                  <div className="flex justify-between items-center pt-2">
+                    <h3 className="font-bold">My Team</h3>
+                    <Menu className="w-5 h-5" />
                   </div>
-                  <div className="flex justify-between">
-                    <span>Mike - 36 hrs</span>
-                    <span className="text-accent font-bold">Pending</span>
+
+                  <div className="bg-secondary rounded-lg p-3 text-sm">
+                    <p className="font-semibold mb-2">Approvals Waiting</p>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span>Sarah - 40 hrs</span>
+                        <span className="text-accent font-bold">Pending</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Mike - 36 hrs</span>
+                        <span className="text-accent font-bold">Pending</span>
+                      </div>
+                    </div>
                   </div>
+
+                  <Button className="w-full" size="sm">Review Timesheets</Button>
+                  
+                  <div className="bg-secondary rounded-lg p-3 text-xs mt-2">
+                    <p className="font-semibold mb-1">Team Hours This Week</p>
+                    <p className="text-lg font-bold">156 hrs</p>
+                  </div>
+
+                  <Button variant="outline" className="w-full" size="sm">Team Schedule</Button>
+                  <Button variant="outline" className="w-full" size="sm">Time Off Requests</Button>
                 </div>
-              </div>
-
-              <Button className="w-full" size="sm">Review Timesheets</Button>
-              
-              <div className="bg-secondary rounded-lg p-3 text-xs mt-2">
-                <p className="font-semibold mb-1">Team Hours This Week</p>
-                <p className="text-lg font-bold">156 hrs</p>
-              </div>
-
-              <Button variant="outline" className="w-full" size="sm">Team Schedule</Button>
-              <Button variant="outline" className="w-full" size="sm">Time Off Requests</Button>
+              </PhoneMockup>
             </div>
-          </PhoneMockup>
-        </section>
 
-        {/* Employee Dashboard */}
-        <section className="border-t pt-16">
-          <h2 className="text-3xl font-bold text-foreground mb-2">Employee Dashboard</h2>
-          <p className="text-muted-foreground mb-8">Clock in, track hours, and manage work</p>
-          
-          <PhoneMockup title="Cadence">
-            <div className="h-full flex flex-col bg-background p-4 space-y-4 overflow-y-auto">
-              <div className="flex justify-between items-center pt-2">
-                <h3 className="font-bold">Today</h3>
-                <Menu className="w-5 h-5" />
-              </div>
+            {/* Employee */}
+            <div>
+              <h3 className="text-lg font-semibold text-foreground mb-3">Employee</h3>
+              <p className="text-sm text-muted-foreground mb-4">Clock in, track hours, and manage work</p>
+              <PhoneMockup title="Cadence">
+                <div className="h-full flex flex-col bg-background p-4 space-y-4 overflow-y-auto">
+                  <div className="flex justify-between items-center pt-2">
+                    <h3 className="font-bold">Today</h3>
+                    <Menu className="w-5 h-5" />
+                  </div>
 
-              <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-6 rounded-2xl text-center">
-                <p className="text-xs opacity-90 mb-1">Current Time</p>
-                <p className="text-4xl font-bold mb-3">09:42</p>
-                <Button className="w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold" size="sm">
-                  Clock Out
-                </Button>
-              </div>
+                  <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-6 rounded-2xl text-center">
+                    <p className="text-xs opacity-90 mb-1">Current Time</p>
+                    <p className="text-4xl font-bold mb-3">09:42</p>
+                    <Button className="w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold" size="sm">
+                      Clock Out
+                    </Button>
+                  </div>
 
-              <div className="grid grid-cols-3 gap-2 text-xs text-center">
-                <div className="bg-secondary p-2 rounded-lg">
-                  <p className="opacity-70">This Week</p>
-                  <p className="font-bold">38.5 hrs</p>
+                  <div className="grid grid-cols-3 gap-2 text-xs text-center">
+                    <div className="bg-secondary p-2 rounded-lg">
+                      <p className="opacity-70">This Week</p>
+                      <p className="font-bold">38.5 hrs</p>
+                    </div>
+                    <div className="bg-secondary p-2 rounded-lg">
+                      <p className="opacity-70">Overtime</p>
+                      <p className="font-bold">0 hrs</p>
+                    </div>
+                    <div className="bg-secondary p-2 rounded-lg">
+                      <p className="opacity-70">PTO Balance</p>
+                      <p className="font-bold">12 hrs</p>
+                    </div>
+                  </div>
+
+                  <Button variant="outline" className="w-full" size="sm">View Timesheet</Button>
+                  <Button variant="outline" className="w-full" size="sm">Request Time Off</Button>
+                  <Button variant="outline" className="w-full" size="sm">Tax Forms</Button>
                 </div>
-                <div className="bg-secondary p-2 rounded-lg">
-                  <p className="opacity-70">Overtime</p>
-                  <p className="font-bold">0 hrs</p>
-                </div>
-                <div className="bg-secondary p-2 rounded-lg">
-                  <p className="opacity-70">PTO Balance</p>
-                  <p className="font-bold">12 hrs</p>
-                </div>
-              </div>
-
-              <Button variant="outline" className="w-full" size="sm">View Timesheet</Button>
-              <Button variant="outline" className="w-full" size="sm">Request Time Off</Button>
-              <Button variant="outline" className="w-full" size="sm">Tax Forms</Button>
+              </PhoneMockup>
             </div>
-          </PhoneMockup>
+          </div>
         </section>
 
         {/* Key Features */}
