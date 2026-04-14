@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DollarSign, Plus, Lock, ArrowRight, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react';
+import { DollarSign, Lock, ArrowRight, CheckCircle2, Download, FileText } from 'lucide-react';
 import { formatDate, formatHours } from '@/lib/timeUtils';
 import { toast } from 'sonner';
 
@@ -29,7 +29,7 @@ export default function PayrollRuns() {
     load();
   }, []);
 
-  const steps = ['Confirm Period', 'Review Hours', 'Resolve Issues', 'Submit to QB', 'Confirmation'];
+  const steps = ['Confirm Period', 'Review Hours', 'Export', 'Confirmation'];
 
   async function startPayrollRun(period) {
     setSelectedPeriod(period);
@@ -37,26 +37,55 @@ export default function PayrollRuns() {
     setStepperOpen(true);
   }
 
-  async function handleSubmitRun() {
+  async function handleExportAndFinalize(format) {
     if (submitting) return;
     setSubmitting(true);
+
+    // Fetch approved time entries for this period
+    const entries = await base44.entities.TimeEntry.filter({ pay_period_id: selectedPeriod.id, status: 'approved' });
+
+    if (format === 'csv') {
+      const rows = [['Worker Name', 'Worker Email', 'Date', 'Regular Hours', 'Overtime Hours', 'Site']];
+      entries.forEach(e => rows.push([e.worker_name, e.worker_email, e.date, e.regular_hours || 0, e.overtime_hours || 0, e.site_name || '']));
+      const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url;
+      a.download = `payroll_${selectedPeriod.start_date}_to_${selectedPeriod.end_date}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+    } else {
+      // IIF format for QuickBooks import
+      const lines = ['!TIMTRK\tTRKTYPE\tNAME\tDURATION\tDATE\tPROJNAME'];
+      entries.forEach(e => {
+        const hours = (e.regular_hours || 0) + (e.overtime_hours || 0);
+        const dateStr = e.date?.replace(/-/g, '/') || '';
+        lines.push(`TIMTRK\tTIME\t${e.worker_name}\t${hours}\t${dateStr}\t${e.site_name || ''}`);
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url;
+      a.download = `payroll_${selectedPeriod.start_date}_to_${selectedPeriod.end_date}.iif`;
+      a.click(); URL.revokeObjectURL(url);
+    }
+
+    // Record the run
     const me = await base44.auth.me();
-    await base44.entities.PayrollRun.create({
+    const newRun = await base44.entities.PayrollRun.create({
       pay_period_id: selectedPeriod.id,
       pay_period_label: `${formatDate(selectedPeriod.start_date)} – ${formatDate(selectedPeriod.end_date)}`,
-      status: 'submitted',
+      status: 'completed',
       total_regular_hours: selectedPeriod.total_regular_hours || 0,
       total_overtime_hours: selectedPeriod.total_overtime_hours || 0,
       submitted_at: new Date().toISOString(),
       submitted_by: me.email,
-      qb_sync_status: 'pending'
     });
     await base44.entities.AuditLog.create({
-      action: 'payroll_submit', entity_type: 'PayrollRun', performed_by: me.email,
-      details: `Payroll run submitted for period ${formatDate(selectedPeriod.start_date)} – ${formatDate(selectedPeriod.end_date)}`
+      action: 'payroll_submit', entity_type: 'PayrollRun', entity_id: newRun.id, performed_by: me.email,
+      details: `Payroll exported as ${format.toUpperCase()} for ${formatDate(selectedPeriod.start_date)} – ${formatDate(selectedPeriod.end_date)}`
     });
-    setCurrentStep(4);
-    toast.success('Payroll run submitted');
+    setRuns(prev => [newRun, ...prev]);
+    setCurrentStep(3);
+    toast.success(`Payroll exported as ${format.toUpperCase()}`);
     setSubmitting(false);
   }
 
@@ -75,7 +104,7 @@ export default function PayrollRuns() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold font-display tracking-tight">Payroll Runs</h1>
-          <p className="text-sm text-muted-foreground mt-1">Submit approved hours to QuickBooks</p>
+          <p className="text-sm text-muted-foreground mt-1">Export approved hours as CSV or IIF</p>
         </div>
       </div>
 
@@ -184,31 +213,36 @@ export default function PayrollRuns() {
 
             {currentStep === 2 && (
               <div className="space-y-4">
-                <div className="bg-success/5 border border-success/20 rounded-lg p-4 flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-success" />
-                  <p className="text-sm">All workers mapped to QuickBooks entities</p>
+                <p className="text-sm text-muted-foreground">Choose an export format to download payroll data for this period.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => handleExportAndFinalize('csv')}
+                    disabled={submitting}
+                    className="flex flex-col items-center gap-2 border border-border rounded-xl p-5 hover:bg-muted/50 transition disabled:opacity-50"
+                  >
+                    <FileText className="w-8 h-8 text-primary" />
+                    <span className="text-sm font-semibold">CSV</span>
+                    <span className="text-xs text-muted-foreground text-center">Universal spreadsheet format</span>
+                  </button>
+                  <button
+                    onClick={() => handleExportAndFinalize('iif')}
+                    disabled={submitting}
+                    className="flex flex-col items-center gap-2 border border-border rounded-xl p-5 hover:bg-muted/50 transition disabled:opacity-50"
+                  >
+                    <Download className="w-8 h-8 text-primary" />
+                    <span className="text-sm font-semibold">IIF</span>
+                    <span className="text-xs text-muted-foreground text-center">QuickBooks import format</span>
+                  </button>
                 </div>
-                <Button onClick={() => setCurrentStep(3)} className="w-full gap-2">Continue <ArrowRight className="w-4 h-4" /></Button>
               </div>
             )}
 
             {currentStep === 3 && (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">Ready to submit approved hours to QuickBooks Payroll. This will create payroll entries for all mapped workers.</p>
-                <Button onClick={handleSubmitRun} disabled={submitting} className="w-full gap-2">
-                  <DollarSign className="w-4 h-4" />{submitting ? 'Submitting…' : 'Submit to QuickBooks'}
-                </Button>
-              </div>
-            )}
-
-            {currentStep === 4 && (
               <div className="space-y-4 text-center py-4">
                 <CheckCircle2 className="w-12 h-12 text-success mx-auto" />
-                <p className="text-sm font-semibold">Payroll Submitted Successfully</p>
-                <p className="text-xs text-muted-foreground">Hours have been sent to QuickBooks Payroll for processing.</p>
-                <Button variant="outline" className="gap-2" onClick={() => setStepperOpen(false)}>
-                  <ExternalLink className="w-4 h-4" />View in QuickBooks
-                </Button>
+                <p className="text-sm font-semibold">Export Complete</p>
+                <p className="text-xs text-muted-foreground">Your payroll file has been downloaded. Import it into your payroll software to process payments.</p>
+                <Button className="w-full" onClick={() => setStepperOpen(false)}>Done</Button>
               </div>
             )}
           </div>
