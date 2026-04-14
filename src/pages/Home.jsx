@@ -24,7 +24,7 @@ export default function Home() {
       {/* Navigation */}
       <nav className="sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="font-display font-bold text-xl text-primary">WorkForce</div>
+          <div className="font-display font-bold text-xl text-primary">Cadence</div>
           {!isAuthenticated && (
             <Button onClick={handleSignIn} variant="default">
               Sign In
@@ -159,7 +159,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto text-center px-4">
           <h2 className="text-3xl font-display font-bold mb-4">Ready to streamline your workforce?</h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Join companies managing thousands of workers with WorkForce. Start your 30-day free trial today.
+            Join companies managing thousands of workers with Cadence. Start your 30-day free trial today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button onClick={handleSignIn} size="lg" className="gap-2">
@@ -176,7 +176,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-border bg-muted/30 py-8">
         <div className="max-w-7xl mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>&copy; 2026 WorkForce. All rights reserved.</p>
+          <p>&copy; 2026 Cadence. All rights reserved.</p>
         </div>
       </footer>
     </div>
