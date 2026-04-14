@@ -104,9 +104,9 @@ export default function ClockPage() {
     // Optimistic update: immediately reflect the punch in UI
     setLastPunch({ ...punchData, id: `temp-${now}` });
     setSubmitting(true);
+    try {
     const created = await base44.entities.Punch.create(punchData);
     setLastPunch(created);
-    setSubmitting(false);
 
     // On clock-in: create or update a TimeEntry for today
     if (punchType === 'clock_in') {
@@ -158,6 +158,9 @@ export default function ClockPage() {
     }
 
     toast.success(`${punchType.replace('_', ' ')} recorded!`);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function handleOogConfirm(reason, note) {

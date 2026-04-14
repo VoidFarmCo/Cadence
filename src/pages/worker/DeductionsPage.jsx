@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TrendingUp, Plus, Car, Home, Wrench, Phone, Utensils, Heart, PiggyBank, DollarSign } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 
 const CATEGORIES = {
@@ -52,28 +52,31 @@ export default function DeductionsPage() {
 
   async function handleAdd() {
     setSaving(true);
-    const profile = await base44.entities.WorkerProfile.filter({ user_email: user.email });
-    let amount = parseFloat(draft.amount) || 0;
-    if (draft.category === 'mileage' && draft.miles) {
-      amount = parseFloat(draft.miles) * 0.67;
+    try {
+      const profile = await base44.entities.WorkerProfile.filter({ user_email: user.email });
+      let amount = parseFloat(draft.amount) || 0;
+      if (draft.category === 'mileage' && draft.miles) {
+        amount = parseFloat(draft.miles) * 0.67;
+      }
+      await base44.entities.TaxDeduction.create({
+        worker_email: user.email,
+        worker_name: profile[0]?.full_name || user.full_name || user.email,
+        tax_year: parseInt(yearFilter),
+        category: draft.category,
+        description: draft.description,
+        amount,
+        miles: draft.miles ? parseFloat(draft.miles) : undefined,
+        date: draft.date,
+        notes: draft.notes,
+      });
+      const updated = await base44.entities.TaxDeduction.filter({ worker_email: user.email }, '-date', 200);
+      setDeductions(updated);
+      setShowAdd(false);
+      setDraft({ category: '', description: '', amount: '', miles: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '' });
+      toast.success('Deduction saved');
+    } finally {
+      setSaving(false);
     }
-    await base44.entities.TaxDeduction.create({
-      worker_email: user.email,
-      worker_name: profile[0]?.full_name || user.full_name || user.email,
-      tax_year: parseInt(yearFilter),
-      category: draft.category,
-      description: draft.description,
-      amount,
-      miles: draft.miles ? parseFloat(draft.miles) : undefined,
-      date: draft.date,
-      notes: draft.notes,
-    });
-    const updated = await base44.entities.TaxDeduction.filter({ worker_email: user.email }, '-date', 200);
-    setDeductions(updated);
-    setShowAdd(false);
-    setDraft({ category: '', description: '', amount: '', miles: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '' });
-    toast.success('Deduction saved');
-    setSaving(false);
   }
 
   const years = ['2024', '2025', '2026'];
@@ -150,7 +153,7 @@ export default function DeductionsPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{d.description || label}</p>
                   <p className="text-xs text-muted-foreground">
-                    {label} · {d.date ? format(new Date(d.date), 'MMM d') : ''}
+                    {label} · {d.date ? format(parseISO(d.date), 'MMM d') : ''}
                     {d.miles ? ` · ${d.miles} miles` : ''}
                   </p>
                 </div>
