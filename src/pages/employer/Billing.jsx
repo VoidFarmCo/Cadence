@@ -36,6 +36,16 @@ export default function Billing() {
   const [checkoutLoading, setCheckoutLoading] = useState(null);
 
   useEffect(() => {
+    // Show feedback after Stripe redirect
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success')) {
+      toast.success('Payment successful! Your plan will update shortly.');
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('cancelled')) {
+      toast.info('Checkout cancelled.');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     async function load() {
       const me = await base44.auth.me();
       const accounts = await base44.entities.Account.filter({ owner_email: me.email });

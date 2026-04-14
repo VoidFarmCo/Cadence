@@ -135,6 +135,31 @@ export default function ClockPage() {
       }
     }
 
+    // On clock-out: update TimeEntry with clock_out and total_hours
+    if (punchType === 'clock_out') {
+      const today = new Date().toISOString().split('T')[0];
+      const existing = await base44.entities.TimeEntry.filter({ worker_email: user.email, date: today });
+      if (existing.length > 0) {
+        const entry = existing[0];
+        let totalHours = 0;
+        if (entry.clock_in) {
+          const diffMs = new Date(now) - new Date(entry.clock_in);
+          const diffHours = diffMs / (1000 * 60 * 60);
+          const breakHours = (entry.break_minutes || 0) / 60;
+          totalHours = Math.max(0, diffHours - breakHours);
+        }
+        const regularHours = Math.min(8, totalHours);
+        const overtimeHours = Math.max(0, totalHours - 8);
+        await base44.entities.TimeEntry.update(entry.id, {
+          clock_out: now,
+          total_hours: parseFloat(totalHours.toFixed(2)),
+          regular_hours: parseFloat(regularHours.toFixed(2)),
+          overtime_hours: parseFloat(overtimeHours.toFixed(2)),
+          has_exception: entry.has_exception || false,
+        });
+      }
+    }
+
     toast.success(`${punchType.replace('_', ' ')} recorded!`);
   }
 

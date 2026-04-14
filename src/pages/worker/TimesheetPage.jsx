@@ -36,21 +36,16 @@ export default function TimesheetPage() {
   const totalHours = weekEntries.reduce((s, e) => s + (e.total_hours || 0), 0);
   const totalOT = weekEntries.reduce((s, e) => s + (e.overtime_hours || 0), 0);
 
-  const canSubmit = weekEntries.length > 0 && weekEntries.every(e => e.status === 'pending');
+  const pendingEntries = weekEntries.filter(e => e.status === 'pending');
+  const canSubmit = pendingEntries.length > 0;
 
   async function handleSubmit() {
-    for (const entry of weekEntries) {
-      if (entry.status === 'pending') {
-        await base44.entities.TimeEntry.update(entry.id, { status: 'submitted' });
-      }
+    for (const entry of pendingEntries) {
+      await base44.entities.TimeEntry.update(entry.id, { status: 'submitted' });
     }
-    setEntries(prev => prev.map(e => {
-      const d = parseISO(e.date);
-      if (d >= weekStart && d <= weekEnd && e.status === 'pending') {
-        return { ...e, status: 'submitted' };
-      }
-      return e;
-    }));
+    setEntries(prev => prev.map(e =>
+      pendingEntries.find(p => p.id === e.id) ? { ...e, status: 'submitted' } : e
+    ));
     toast.success('Timesheet submitted for approval');
   }
 

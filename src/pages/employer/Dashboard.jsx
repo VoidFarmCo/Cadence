@@ -33,10 +33,12 @@ export default function Dashboard() {
 
   const todayStr = new Date().toISOString().split('T')[0];
   const todayPunches = punches.filter(p => p.timestamp?.startsWith(todayStr));
+  // Sort ascending by timestamp to correctly track latest state
+  const sortedTodayPunches = [...todayPunches].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   const clockedInWorkers = new Set();
-  todayPunches.forEach(p => {
-    if (p.punch_type === 'clock_in') clockedInWorkers.add(p.worker_email);
-    if (p.punch_type === 'clock_out') clockedInWorkers.delete(p.worker_email);
+  sortedTodayPunches.forEach(p => {
+    if (p.punch_type === 'clock_in' || p.punch_type === 'break_end') clockedInWorkers.add(p.worker_email);
+    if (p.punch_type === 'clock_out' || p.punch_type === 'break_start') clockedInWorkers.delete(p.worker_email);
   });
 
   const exceptions = todayPunches.filter(p => p.out_of_geofence || p.offline_captured);
