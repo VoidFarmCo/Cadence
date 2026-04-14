@@ -1,0 +1,127 @@
+{
+  "name": "Account",
+  "type": "object",
+  "properties": {
+    "owner_email": {
+      "type": "string",
+      "title": "Owner Email"
+    },
+    "owner_name": {
+      "type": "string",
+      "title": "Owner Name"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "trial",
+        "active",
+        "locked",
+        "cancelled"
+      ],
+      "default": "trial",
+      "title": "Status"
+    },
+    "plan": {
+      "type": "string",
+      "enum": [
+        "solo",
+        "pro",
+        "business",
+        "enterprise"
+      ],
+      "title": "Plan"
+    },
+    "billing_interval": {
+      "type": "string",
+      "enum": [
+        "month",
+        "year"
+      ],
+      "default": "month",
+      "title": "Billing Interval"
+    },
+    "trial_start": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Trial Start"
+    },
+    "trial_end": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Trial End"
+    },
+    "stripe_customer_id": {
+      "type": "string",
+      "title": "Stripe Customer ID"
+    },
+    "stripe_subscription_id": {
+      "type": "string",
+      "title": "Stripe Subscription ID"
+    },
+    "stripe_subscription_status": {
+      "type": "string",
+      "title": "Stripe Subscription Status"
+    },
+    "user_limit": {
+      "type": "number",
+      "title": "User Limit"
+    },
+    "lock_reason": {
+      "type": "string",
+      "enum": [
+        "trial_expired",
+        "payment_failed"
+      ],
+      "title": "Lock Reason"
+    },
+    "reminder_25_sent": {
+      "type": "boolean",
+      "default": false,
+      "title": "Day 25 Reminder Sent"
+    },
+    "reminder_29_sent": {
+      "type": "boolean",
+      "default": false,
+      "title": "Day 29 Reminder Sent"
+    }
+  },
+  "required": [
+    "owner_email"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
