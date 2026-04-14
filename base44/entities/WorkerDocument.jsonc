@@ -1,0 +1,87 @@
+{
+  "name": "WorkerDocument",
+  "type": "object",
+  "properties": {
+    "worker_email": {
+      "type": "string",
+      "title": "Worker Email"
+    },
+    "worker_name": {
+      "type": "string",
+      "title": "Worker Name"
+    },
+    "doc_type": {
+      "type": "string",
+      "enum": [
+        "W-4",
+        "I-9",
+        "W-9",
+        "Contract",
+        "Certification",
+        "Direct Deposit Auth",
+        "Other"
+      ],
+      "title": "Document Type"
+    },
+    "title": {
+      "type": "string",
+      "title": "Title"
+    },
+    "file_url": {
+      "type": "string",
+      "title": "File URL"
+    },
+    "file_name": {
+      "type": "string",
+      "title": "File Name"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    },
+    "uploaded_by": {
+      "type": "string",
+      "title": "Uploaded By"
+    },
+    "expiry_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Expiry Date"
+    }
+  },
+  "required": [
+    "worker_email",
+    "doc_type",
+    "title",
+    "file_url"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.worker_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { DollarSign, MapPin, LogOut, Shield, Smartphone, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
+import WorkerDocuments from '@/components/documents/WorkerDocuments';
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
@@ -130,6 +131,13 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* Documents */}
+      {profile && (
+        <div className="bg-card rounded-xl border border-border p-5">
+          <WorkerDocuments worker={profile} readOnly={true} />
+        </div>
+      )}
 
       {/* GPS Permissions */}
       <div className="bg-card rounded-xl border border-border p-5 space-y-3">

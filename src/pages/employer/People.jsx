@@ -8,12 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { UserPlus, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import WorkerDetailModal from '@/components/documents/WorkerDetailModal';
 
 export default function People() {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedWorker, setSelectedWorker] = useState(null);
   const [form, setForm] = useState({ full_name: '', user_email: '', phone: '', worker_type: 'employee', role: 'worker', pay_rate: '' });
 
   useEffect(() => {
@@ -139,7 +141,7 @@ export default function People() {
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map(w => (
-                <tr key={w.id} className="hover:bg-muted/20 transition-colors">
+                <tr key={w.id} className="hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => setSelectedWorker(w)}>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
@@ -176,6 +178,12 @@ export default function People() {
           </div>
         )}
       </div>
+
+      <WorkerDetailModal
+        worker={selectedWorker}
+        open={!!selectedWorker}
+        onClose={() => setSelectedWorker(null)}
+      />
     </div>
   );
 }
