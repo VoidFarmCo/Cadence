@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Sprout } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import { cn } from '@/lib/utils';
 
@@ -19,9 +19,9 @@ export default function NavigationHeader({ user, isAdmin }) {
         {isRoot ? (
           <Link to="/worker-home" className="flex items-center gap-2 select-none">
             <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-              <Sprout className="w-4 h-4 text-primary-foreground" />
+              <span className="text-xs font-bold text-primary-foreground">⚡</span>
             </div>
-            <span className="font-bold text-sm font-display text-primary">AgriClock</span>
+            <span className="font-bold text-sm font-display text-primary">Cadence</span>
           </Link>
         ) : (
           <button
