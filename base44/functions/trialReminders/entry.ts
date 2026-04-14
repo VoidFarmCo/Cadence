@@ -3,8 +3,12 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
 
-    // Scheduled automations run as service role (no user context needed)
+    // Verify admin privileges
+    if (user?.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
 
     // Get all accounts in trial
     const accounts = await base44.asServiceRole.entities.Account.filter({
