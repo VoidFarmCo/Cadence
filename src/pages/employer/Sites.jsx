@@ -5,14 +5,16 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { MapPin, Plus, Navigation } from 'lucide-react';
+import { MapPin, Plus, Navigation, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
+import SiteGeofenceEditor from '@/components/sites/SiteGeofenceEditor';
 
 export default function Sites() {
   const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ name: '', latitude: '', longitude: '', radius_meters: '200', address: '' });
+  const [editingSite, setEditingSite] = useState(null);
 
   useEffect(() => { loadSites(); }, []);
 
@@ -38,6 +40,12 @@ export default function Sites() {
     toast.success(`Site "${form.name}" created`);
     setDialogOpen(false);
     setForm({ name: '', latitude: '', longitude: '', radius_meters: '200', address: '' });
+    loadSites();
+  }
+
+  async function handleSaveRadius(siteId, radius) {
+    await base44.entities.Site.update(siteId, { radius_meters: radius });
+    toast.success('Geofence radius updated');
     loadSites();
   }
 
@@ -118,6 +126,15 @@ export default function Sites() {
               <span>{site.latitude?.toFixed(4)}, {site.longitude?.toFixed(4)}</span>
               <span>{site.radius_meters}m radius</span>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4 w-full gap-2 text-xs h-8"
+              onClick={() => setEditingSite(site)}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Adjust Geofence
+            </Button>
           </div>
         ))}
       </div>
@@ -129,6 +146,13 @@ export default function Sites() {
           <p className="text-xs text-muted-foreground mt-1">Add your first field or work site to enable GPS tracking</p>
         </div>
       )}
+
+      <SiteGeofenceEditor
+        site={editingSite}
+        open={!!editingSite}
+        onClose={() => setEditingSite(null)}
+        onSave={handleSaveRadius}
+      />
     </div>
   );
 }
