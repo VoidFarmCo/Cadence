@@ -5,9 +5,10 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    // Verify admin privileges
-    if (user?.role !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    // Allow admin and owner roles (scheduled task)
+    const allowedRoles = ['admin', 'owner'];
+    if (!user || !allowedRoles.includes(user.role)) {
+      return Response.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 });
     }
 
     // Get all accounts in trial

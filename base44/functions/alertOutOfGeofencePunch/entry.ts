@@ -5,9 +5,10 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    // Verify admin privileges
-    if (user?.role !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    // Allow admin, owner, and manager roles (also called by entity automation)
+    const allowedRoles = ['admin', 'owner', 'manager', 'payroll_admin'];
+    if (!user || !allowedRoles.includes(user.role)) {
+      return Response.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 });
     }
 
     const payload = await req.json();

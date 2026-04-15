@@ -6,8 +6,9 @@ Deno.serve(async (req) => {
     
     // Verify authentication and admin role (required for entity automations)
     const user = await base44.auth.me().catch(() => null);
-    if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    const allowedRoles = ['admin', 'owner', 'payroll_admin'];
+    if (!user || !allowedRoles.includes(user.role)) {
+      return Response.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 });
     }
     
     const payload = await req.json();
