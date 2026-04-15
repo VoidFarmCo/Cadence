@@ -27,7 +27,7 @@ async function fetchData(email) {
   const upcoming = shifts.filter(s => s.date >= format(now, 'yyyy-MM-dd') && s.status !== 'cancelled');
   return {
     profile: profiles[0] || null,
-    weekHours: weekEntries.reduce((s, e) => s + (e.total_hours || 0), 0),
+    weekHours: weekEntries.reduce((s, e) => s + (e.regular_hours || 0), 0),
     weekOT: weekEntries.reduce((s, e) => s + (e.overtime_hours || 0), 0),
     pendingForms: forms.length,
     pendingLeave: leaves[0] || null,

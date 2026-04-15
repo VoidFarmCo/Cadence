@@ -61,7 +61,7 @@ export default function Reports() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard icon={Clock} label="Total Hours" value={formatHours(totalHours)} subtitle={`${entries.length} entries`} />
         <StatsCard icon={Clock} label="Regular Hours" value={formatHours(totalRegular)} />
-        <StatsCard icon={DollarSign} label="Overtime Hours" value={formatHours(totalOT)} />
+        <StatsCard icon={Clock} label="Overtime Hours" value={formatHours(totalOT)} />
         <StatsCard icon={Users} label="Active Workers" value={workers.length} />
       </div>
 

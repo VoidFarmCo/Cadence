@@ -1,7 +1,5 @@
 import NotificationBell from './NotificationBell';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 
 export default function MobileHeader({ user, isAdmin }) {
   return (

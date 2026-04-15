@@ -218,16 +218,16 @@ export default function PayrollRuns() {
                   <button
                     onClick={() => handleExportAndFinalize('csv')}
                     disabled={submitting}
-                    className="flex flex-col items-center gap-2 border border-border rounded-xl p-5 hover:bg-muted/50 transition disabled:opacity-50"
+                    className="flex flex-col items-center gap-2 border border-border rounded-xl p-5 hover:bg-muted/50 transition disabled:opacity-50 relative"
                   >
-                    <FileText className="w-8 h-8 text-primary" />
+                    {submitting ? <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" /> : <FileText className="w-8 h-8 text-primary" />}
                     <span className="text-sm font-semibold">CSV</span>
                     <span className="text-xs text-muted-foreground text-center">Universal spreadsheet format</span>
                   </button>
                   <button
                     onClick={() => handleExportAndFinalize('iif')}
                     disabled={submitting}
-                    className="flex flex-col items-center gap-2 border border-border rounded-xl p-5 hover:bg-muted/50 transition disabled:opacity-50"
+                    className="flex flex-col items-center gap-2 border border-border rounded-xl p-5 hover:bg-muted/50 transition disabled:opacity-50 relative"
                   >
                     <Download className="w-8 h-8 text-primary" />
                     <span className="text-sm font-semibold">IIF</span>
