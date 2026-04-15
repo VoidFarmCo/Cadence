@@ -65,7 +65,7 @@ export default function SchedulePage() {
           <h1 className="text-2xl font-bold font-display tracking-tight">Schedule</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage weekly shift assignments</p>
         </div>
-        <Button onClick={() => setShowAdd(true)}><Plus className="w-4 h-4" /> Add Shift</Button>
+        <Button onClick={() => { setDraft({ worker_email: '', site_id: '', date: format(weekStart, 'yyyy-MM-dd'), start_time: '07:00', end_time: '15:00', notes: '' }); setShowAdd(true); }}><Plus className="w-4 h-4" /> Add Shift</Button>
       </div>
 
       {/* Week nav */}
