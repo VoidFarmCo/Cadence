@@ -4,9 +4,12 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    // This function is invoked exclusively by a platform entity automation.
-    // Use service role to verify the punch record actually exists, preventing
-    // arbitrary authenticated users from triggering alerts with fake payloads.
+    // Verify the shared automation secret to block unauthenticated callers
+    const authHeader = req.headers.get('x-automation-secret');
+    if (!authHeader || authHeader !== Deno.env.get('AUTOMATION_SECRET')) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const payload = await req.json();
     const punch = payload.data;
     const punchId = payload.event?.entity_id;
