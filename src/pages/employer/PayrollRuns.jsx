@@ -54,7 +54,7 @@ export default function PayrollRuns() {
       a.download = `payroll_${selectedPeriod.start_date}_to_${selectedPeriod.end_date}.csv`;
       a.click(); URL.revokeObjectURL(url);
     } else {
-      // IIF format for QuickBooks import
+      // IIF format for payroll import
       const lines = ['!TIMTRK\tTRKTYPE\tNAME\tDURATION\tDATE\tPROJNAME'];
       entries.forEach(e => {
         const hours = (e.regular_hours || 0) + (e.overtime_hours || 0);
@@ -104,7 +104,7 @@ export default function PayrollRuns() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold font-display tracking-tight">Payroll Runs</h1>
-          <p className="text-sm text-muted-foreground mt-1">Export approved hours as CSV or IIF</p>
+          <p className="text-sm text-muted-foreground mt-1">Export approved hours as CSV or IIF for your payroll software</p>
         </div>
       </div>
 
@@ -231,7 +231,7 @@ export default function PayrollRuns() {
                   >
                     <Download className="w-8 h-8 text-primary" />
                     <span className="text-sm font-semibold">IIF</span>
-                    <span className="text-xs text-muted-foreground text-center">QuickBooks import format</span>
+                    <span className="text-xs text-muted-foreground text-center">Generic payroll import format</span>
                   </button>
                 </div>
               </div>

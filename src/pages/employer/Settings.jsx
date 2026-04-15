@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Building2, Link2, Lock, Plus, Calendar } from 'lucide-react';
+import { Building2, Plus, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, addDays, parseISO } from 'date-fns';
 
@@ -133,27 +132,6 @@ export default function Settings() {
         </Button>
       </div>
 
-      {/* QuickBooks */}
-      <div className="bg-card rounded-xl border border-border p-6 space-y-5">
-        <div className="flex items-center gap-3 mb-2">
-          <Link2 className="w-5 h-5 text-primary" />
-          <h2 className="text-sm font-semibold">QuickBooks Integration</h2>
-        </div>
-        <div className="bg-muted/50 rounded-lg p-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">QuickBooks Payroll</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {form.qb_connected ? 'Connected' : 'Not connected'}
-            </p>
-          </div>
-          <Badge variant="secondary" className={form.qb_connected ? 'bg-success/10 text-success' : ''}>
-            {form.qb_connected ? 'Connected' : 'Disconnected'}
-          </Badge>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          QuickBooks connection requires OAuth setup. This handles tax calculations, filings, and direct deposit.
-        </p>
-      </div>
 
       <Button onClick={handleSave} className="w-full sm:w-auto">Save Settings</Button>
     </div>
