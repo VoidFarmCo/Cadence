@@ -49,6 +49,17 @@ export default function RoleRouter() {
           // Assign owner role on the user record
           await base44.auth.updateMe({ role: 'owner' });
 
+          // Track new account creation
+          base44.analytics.track({
+            eventName: 'new_company_account_created',
+            properties: {
+              owner_email: me.email,
+              owner_name: me.full_name,
+              trial_start: now.toISOString(),
+              trial_end: trialEnd.toISOString(),
+            }
+          });
+
           setRole('owner');
         } else {
           setRole(me.role || 'worker');
