@@ -2,15 +2,14 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    // Allow admin, owner, and manager roles (also called by entity automation)
-    const allowedRoles = ['admin', 'owner', 'manager', 'payroll_admin'];
-    if (!user || !allowedRoles.includes(user.role)) {
-      return Response.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 });
+    // Verify internal platform call via app ID header
+    const appId = Deno.env.get('BASE44_APP_ID');
+    const callerAppId = req.headers.get('x-base44-app-id');
+    if (!appId || callerAppId !== appId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const base44 = createClientFromRequest(req);
     const payload = await req.json();
     const punch = payload.data;
 
