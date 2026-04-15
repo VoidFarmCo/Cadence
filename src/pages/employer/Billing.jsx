@@ -181,14 +181,14 @@ export default function Billing() {
         <div className="w-px h-6 bg-border" />
         <button
           onClick={() => setBillingInterval('annual')}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors relative ${
+          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
             billingInterval === 'annual'
               ? 'bg-primary text-primary-foreground'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           Annual
-          <Badge className="absolute -top-2 -right-8 bg-success/10 text-success border-success/20 text-xs">Save up to 20%</Badge>
+          <Badge className="bg-success/10 text-success border-success/20 text-xs">Save 20%</Badge>
         </button>
       </div>
 
