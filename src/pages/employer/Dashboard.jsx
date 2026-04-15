@@ -32,6 +32,23 @@ export default function Dashboard() {
     }
     load();
   }, []);
+  
+  // Subscribe to real-time Punch updates
+  useEffect(() => {
+    const unsubscribe = base44.entities.Punch.subscribe((event) => {
+      setPunches(prev => {
+        if (event.type === 'create') {
+          return [event.data, ...prev].slice(0, 50);
+        } else if (event.type === 'update') {
+          return prev.map(p => p.id === event.id ? event.data : p);
+        } else if (event.type === 'delete') {
+          return prev.filter(p => p.id !== event.id);
+        }
+        return prev;
+      });
+    });
+    return unsubscribe;
+  }, []);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const todayPunches = punches.filter(p => p.timestamp?.startsWith(todayStr));
