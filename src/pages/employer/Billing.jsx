@@ -188,7 +188,7 @@ export default function Billing() {
           }`}
         >
           Annual
-          <Badge className="absolute -top-2 -right-8 bg-success/10 text-success border-success/20 text-xs">Save 20%</Badge>
+          <Badge className="absolute -top-2 -right-8 bg-success/10 text-success border-success/20 text-xs">Save up to 20%</Badge>
         </button>
       </div>
 
@@ -213,11 +213,18 @@ export default function Billing() {
                 <p className="text-xs text-muted-foreground mt-0.5">{plan.description}</p>
               </div>
               {!plan.enterprise && (
-                <div className="flex items-end gap-1">
-                  <span className="text-2xl font-bold">
-                    ${billingInterval === 'monthly' ? plan.monthlyPrice : (plan.annualPrice / 12).toFixed(2)}
-                  </span>
-                  <span className="text-sm text-muted-foreground mb-1">/{billingInterval === 'monthly' ? 'mo' : 'mo'}</span>
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-end gap-1">
+                    <span className="text-2xl font-bold">
+                      ${billingInterval === 'monthly' ? plan.monthlyPrice : Math.round(plan.annualPrice / 12)}
+                    </span>
+                    <span className="text-sm text-muted-foreground mb-1">/mo</span>
+                  </div>
+                  {billingInterval === 'annual' && (
+                    <p className="text-xs text-muted-foreground">
+                      ${plan.annualPrice}/yr · save {Math.round((1 - plan.annualPrice / (plan.monthlyPrice * 12)) * 100)}%
+                    </p>
+                  )}
                 </div>
               )}
               {plan.enterprise && (
