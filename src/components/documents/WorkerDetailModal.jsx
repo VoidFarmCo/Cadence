@@ -16,8 +16,19 @@ export default function WorkerDetailModal({ worker, open, onClose, onDeleted }) 
 
   async function handleDelete() {
     setDeleting(true);
-    await base44.entities.WorkerProfile.delete(worker.id);
-    toast.success(`${worker.full_name} has been removed`);
+    try {
+      await base44.entities.WorkerProfile.delete(worker.id);
+      toast.success(`${worker.full_name} has been removed`);
+    } catch (err) {
+      // If record not found, treat as already deleted
+      if (err?.message?.includes('not found')) {
+        toast.success(`${worker.full_name} has been removed`);
+      } else {
+        toast.error('Failed to remove worker');
+        setDeleting(false);
+        return;
+      }
+    }
     setDeleting(false);
     onClose();
     if (onDeleted) onDeleted();
