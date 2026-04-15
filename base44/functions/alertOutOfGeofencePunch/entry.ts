@@ -2,14 +2,16 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
-    // Verify internal platform call via app ID header
-    const appId = Deno.env.get('BASE44_APP_ID');
-    const callerAppId = req.headers.get('x-base44-app-id');
-    if (!appId || callerAppId !== appId) {
+    const base44 = createClientFromRequest(req);
+
+    // This function is called by an entity automation (platform-internal).
+    // Accept calls from authenticated users of any role OR from the platform scheduler.
+    // Reject completely unauthenticated external requests.
+    const isAuthenticated = await base44.auth.isAuthenticated();
+    if (!isAuthenticated) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const base44 = createClientFromRequest(req);
     const payload = await req.json();
     const punch = payload.data;
 

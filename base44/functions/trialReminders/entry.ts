@@ -2,14 +2,11 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
-    // Verify internal platform call via app ID header
-    const appId = Deno.env.get('BASE44_APP_ID');
-    const callerAppId = req.headers.get('x-base44-app-id');
-    if (!appId || callerAppId !== appId) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user || user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
 
     // Get all accounts in trial
     const accounts = await base44.asServiceRole.entities.Account.filter({
