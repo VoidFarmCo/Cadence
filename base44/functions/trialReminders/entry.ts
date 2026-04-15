@@ -2,6 +2,13 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
+    // Verify internal platform call via app ID header
+    const appId = Deno.env.get('BASE44_APP_ID');
+    const callerAppId = req.headers.get('x-base44-app-id');
+    if (!appId || callerAppId !== appId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const base44 = createClientFromRequest(req);
 
     // Get all accounts in trial
