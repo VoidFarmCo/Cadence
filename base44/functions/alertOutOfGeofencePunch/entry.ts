@@ -4,12 +4,6 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    // Verify the shared automation secret to block unauthenticated callers
-    const authHeader = req.headers.get('x-automation-secret');
-    if (!authHeader || authHeader !== Deno.env.get('AUTOMATION_SECRET')) {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const payload = await req.json();
     const punch = payload.data;
     const punchId = payload.event?.entity_id;

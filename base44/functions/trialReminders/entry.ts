@@ -3,10 +3,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
-    }
 
     // Get all accounts in trial
     const accounts = await base44.asServiceRole.entities.Account.filter({
@@ -24,7 +20,7 @@ Deno.serve(async (req) => {
 
       // Send day 25 reminder
       if (daysInTrial === 25 && !account.reminder_25_sent) {
-        await base44.integrations.Core.SendEmail({
+        await base44.asServiceRole.integrations.Core.SendEmail({
           to: account.owner_email,
           subject: 'Your Cadence trial ends in 5 days',
           body: `Hi ${account.owner_name || 'there'},\n\nYour 30-day free trial of Cadence ends in 5 days. Choose a plan to continue using Cadence after your trial ends.\n\nVisit your billing page to upgrade: https://cadence.app/billing\n\nBest regards,\nCadence Team`
@@ -44,7 +40,7 @@ Deno.serve(async (req) => {
 
       // Send day 29 reminder
       if (daysInTrial === 29 && !account.reminder_29_sent) {
-        await base44.integrations.Core.SendEmail({
+        await base44.asServiceRole.integrations.Core.SendEmail({
           to: account.owner_email,
           subject: 'Your Cadence trial expires tomorrow',
           body: `Hi ${account.owner_name || 'there'},\n\nYour 30-day free trial of Cadence expires tomorrow. Please choose a plan to continue using Cadence.\n\nUpgrade now: https://cadence.app/billing\n\nBest regards,\nCadence Team`
