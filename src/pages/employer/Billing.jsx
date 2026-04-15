@@ -50,10 +50,7 @@ const PLANS = [
   {
     id: 'enterprise',
     name: 'Enterprise',
-    monthlyPrice: 499,
-    annualPrice: 4999,
-    monthlyPriceId: 'price_1TMGsDDPghjun5PibOla4drH',
-    annualPriceId: 'price_1TMGsDDPghjun5PiuZZy6DoF',
+    enterprise: true,
     description: 'Unlimited users',
     features: ['Unlimited user accounts', 'All Business features', 'Custom integrations', 'Dedicated account manager'],
   },
