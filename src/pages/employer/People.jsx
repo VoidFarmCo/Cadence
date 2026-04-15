@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import PullToRefresh from '@/components/PullToRefresh';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +59,7 @@ export default function People() {
   }
 
   return (
+    <PullToRefresh onRefresh={loadWorkers}>
     <div className="space-y-6 animate-slide-up">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -186,5 +188,6 @@ export default function People() {
         onDeleted={() => { setSelectedWorker(null); loadWorkers(); }}
       />
     </div>
+    </PullToRefresh>
   );
 }

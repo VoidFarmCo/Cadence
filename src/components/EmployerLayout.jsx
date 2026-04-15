@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import EmployerSidebar from './EmployerSidebar';
 import MobileHeader from './MobileHeader';
+import EmployerMobileNav from './EmployerMobileNav';
 import useCurrentUser from '@/lib/useCurrentUser';
 
 export default function EmployerLayout() {
@@ -19,10 +20,11 @@ export default function EmployerLayout() {
       <EmployerSidebar user={user} />
       <div className="flex-1 flex flex-col min-h-screen">
         <MobileHeader user={user} isAdmin={true} />
-        <main className="flex-1 p-4 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 lg:p-8 max-w-7xl w-full mx-auto pb-20 lg:pb-8">
           <Outlet />
         </main>
       </div>
+      <EmployerMobileNav />
     </div>
   );
 }

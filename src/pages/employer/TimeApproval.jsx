@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PullToRefresh from '@/components/PullToRefresh';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,18 +20,17 @@ export default function TimeApproval() {
   const [editDialog, setEditDialog] = useState(null);
   const [editReason, setEditReason] = useState('');
 
-  useEffect(() => {
-    async function load() {
-      const [e, w] = await Promise.all([
-        base44.entities.TimeEntry.list('-date', 100),
-        base44.entities.WorkerProfile.filter({ status: 'active' }),
-      ]);
-      setEntries(e);
-      setWorkers(w);
-      setLoading(false);
-    }
-    load();
-  }, []);
+  async function load() {
+    const [e, w] = await Promise.all([
+      base44.entities.TimeEntry.list('-date', 100),
+      base44.entities.WorkerProfile.filter({ status: 'active' }),
+    ]);
+    setEntries(e);
+    setWorkers(w);
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
 
   const filtered = entries.filter(e => {
     if (filterWorker !== 'all' && e.worker_email !== filterWorker) return false;
@@ -83,6 +83,7 @@ export default function TimeApproval() {
   }
 
   return (
+    <PullToRefresh onRefresh={load}>
     <div className="space-y-6 animate-slide-up">
       <div>
         <h1 className="text-2xl font-bold font-display tracking-tight">Time Approval</h1>
@@ -189,5 +190,6 @@ export default function TimeApproval() {
         </DialogContent>
       </Dialog>
     </div>
+    </PullToRefresh>
   );
 }
