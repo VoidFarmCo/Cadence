@@ -193,7 +193,7 @@ export default function Billing() {
       </div>
 
       {/* Plans */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {PLANS.map((plan) => {
           const isCurrent = currentPlan === plan.id;
           return (
@@ -216,13 +216,15 @@ export default function Billing() {
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-end gap-1">
                     <span className="text-2xl font-bold">
-                      ${billingInterval === 'monthly' ? plan.monthlyPrice : Math.round(plan.annualPrice / 12)}
+                      ${billingInterval === 'monthly' ? plan.monthlyPrice : plan.annualPrice}
                     </span>
-                    <span className="text-sm text-muted-foreground mb-1">/mo</span>
+                    <span className="text-sm text-muted-foreground mb-1">
+                      {billingInterval === 'monthly' ? '/mo' : '/yr'}
+                    </span>
                   </div>
                   {billingInterval === 'annual' && (
-                    <p className="text-xs text-muted-foreground">
-                      ${plan.annualPrice}/yr · save {Math.round((1 - plan.annualPrice / (plan.monthlyPrice * 12)) * 100)}%
+                    <p className="text-xs text-success">
+                      Save {Math.round((1 - plan.annualPrice / (plan.monthlyPrice * 12)) * 100)}% vs monthly
                     </p>
                   )}
                 </div>
