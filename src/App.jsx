@@ -31,6 +31,7 @@ import TimeOffPage from './pages/worker/TimeOffPage';
 import ExpensesPage from './pages/worker/ExpensesPage';
 import ProfilePage from './pages/worker/ProfilePage';
 import Billing from './pages/employer/Billing';
+import PayrollAnalytics from './pages/employer/PayrollAnalytics';
 
 function useDarkMode() {
   useEffect(() => {
@@ -79,6 +80,7 @@ const AuthenticatedApp = () => {
         <Route path="/time-approval" element={<TimeApproval />} />
         <Route path="/time-off-admin" element={<TimeOffAdmin />} />
         <Route path="/payroll" element={<PayrollRuns />} />
+        <Route path="/payroll-analytics" element={<PayrollAnalytics />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/billing" element={<Billing />} />
