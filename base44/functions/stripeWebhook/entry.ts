@@ -23,9 +23,22 @@ Deno.serve(async (req) => {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const ownerEmail = session.metadata?.owner_email;
-      const planId = session.metadata?.plan_id;
+      const rawPlanId = session.metadata?.plan_id;
       const customerId = session.customer;
       const subscriptionId = session.subscription;
+
+      // Normalize: if plan_id looks like a price ID, map it to a plan name
+      const PRICE_TO_PLAN = {
+        'price_1TMGsDDPghjun5PixSQyO7gs': 'solo',
+        'price_1TMGsDDPghjun5Pizf7LFxjd': 'solo',
+        'price_1TMGsDDPghjun5Pi1KcCN4yt': 'pro',
+        'price_1TMGsDDPghjun5PiynXY1nGn': 'pro',
+        'price_1TMGsDDPghjun5PiCFdTX8Wi': 'business',
+        'price_1TMGsDDPghjun5Pie9vyRaPb': 'business',
+        'price_1TMGwDDPghjun5Pi7Q74Xy9U': 'business-pro',
+        'price_1TMGwDDPghjun5PiBFsszW9I': 'business-pro',
+      };
+      const planId = PRICE_TO_PLAN[rawPlanId] || rawPlanId;
 
       if (!ownerEmail || !planId) {
         console.error('Missing metadata in session:', session.id);

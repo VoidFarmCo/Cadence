@@ -132,6 +132,40 @@ export default function ClockPage() {
       }
     }
 
+    // On break_start: record break start time in exception_notes for later calculation
+    if (punchType === 'break_start') {
+      const today = new Date().toISOString().split('T')[0];
+      const existing = await base44.entities.TimeEntry.filter({ worker_email: user.email, date: today });
+      if (existing.length > 0) {
+        const entry = existing[0];
+        // Store break start time so break_end can calculate duration
+        await base44.entities.TimeEntry.update(entry.id, {
+          exception_notes: JSON.stringify({ ...JSON.parse(entry.exception_notes || '{}'), break_start: now }),
+        });
+      }
+    }
+
+    // On break_end: calculate break duration and accumulate break_minutes
+    if (punchType === 'break_end') {
+      const today = new Date().toISOString().split('T')[0];
+      const existing = await base44.entities.TimeEntry.filter({ worker_email: user.email, date: today });
+      if (existing.length > 0) {
+        const entry = existing[0];
+        let extraBreakMinutes = 0;
+        try {
+          const meta = JSON.parse(entry.exception_notes || '{}');
+          if (meta.break_start) {
+            extraBreakMinutes = Math.round((new Date(now) - new Date(meta.break_start)) / 60000);
+            delete meta.break_start;
+            await base44.entities.TimeEntry.update(entry.id, {
+              break_minutes: (entry.break_minutes || 0) + extraBreakMinutes,
+              exception_notes: JSON.stringify(meta),
+            });
+          }
+        } catch {}
+      }
+    }
+
     // On clock-out: update TimeEntry with clock_out and total_hours
     if (punchType === 'clock_out') {
       const today = new Date().toISOString().split('T')[0];
@@ -145,8 +179,18 @@ export default function ClockPage() {
           const breakHours = (entry.break_minutes || 0) / 60;
           totalHours = Math.max(0, diffHours - breakHours);
         }
-        const regularHours = Math.min(8, totalHours);
-        const overtimeHours = Math.max(0, totalHours - 8);
+        // Calculate weekly hours to determine OT correctly (weekly threshold, default 40hrs)
+        const weekStart = new Date(now);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEntries = await base44.entities.TimeEntry.filter({ worker_email: user.email });
+        const hoursThisWeekSoFar = weekEntries
+          .filter(e => e.id !== entry.id && e.date >= weekStart.toISOString().split('T')[0])
+          .reduce((s, e) => s + (e.total_hours || 0), 0);
+        const weeklyOTThreshold = 40;
+        const remainingRegular = Math.max(0, weeklyOTThreshold - hoursThisWeekSoFar);
+        const regularHours = Math.min(totalHours, remainingRegular);
+        const overtimeHours = Math.max(0, totalHours - regularHours);
         await base44.entities.TimeEntry.update(entry.id, {
           clock_out: now,
           total_hours: parseFloat(totalHours.toFixed(2)),
