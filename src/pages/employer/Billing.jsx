@@ -9,20 +9,20 @@ const PLANS = [
   {
     id: 'solo',
     name: 'Solo',
-    monthlyPrice: 10,
-    annualPrice: 96,
-    monthlyPriceId: 'price_1TMEVTDeftkn5UiB2kRN3EPH',
-    annualPriceId: 'price_1TMEVTDeftkn5UiBKvLDueAa',
+    monthlyPrice: 29,
+    annualPrice: 299,
+    monthlyPriceId: 'price_1TMGsDDPghjun5PixSQyO7gs',
+    annualPriceId: 'price_1TMGsDDPghjun5Pizf7LFxjd',
     description: '1 user',
     features: ['1 user account', 'GPS time clock', 'Basic reporting', 'Tax forms'],
   },
   {
     id: 'pro',
     name: 'Pro',
-    monthlyPrice: 49,
-    annualPrice: 470.40,
-    monthlyPriceId: 'price_1TMEVTDeftkn5UiB488E3KHD',
-    annualPriceId: 'price_1TMEVTDeftkn5UiB9GzclHzs',
+    monthlyPrice: 79,
+    annualPrice: 799,
+    monthlyPriceId: 'price_1TMGsDDPghjun5Pi1KcCN4yt',
+    annualPriceId: 'price_1TMGsDDPghjun5PiynXY1nGn',
     description: 'Up to 5 users',
     features: ['5 user accounts', 'GPS time clock', 'Advanced reports', 'Payroll runs', 'Schedule management'],
     popular: true,
@@ -30,31 +30,22 @@ const PLANS = [
   {
     id: 'business',
     name: 'Business',
-    monthlyPrice: 180,
-    annualPrice: 1728,
-    monthlyPriceId: 'price_1TMEVTDeftkn5UiBmqPkxCFv',
-    annualPriceId: 'price_1TMEVTDeftkn5UiBalsJTDAE',
+    monthlyPrice: 199,
+    annualPrice: 1999,
+    monthlyPriceId: 'price_1TMGsDDPghjun5PiCFdTX8Wi',
+    annualPriceId: 'price_1TMGsDDPghjun5Pie9vyRaPb',
     description: 'Up to 20 users',
     features: ['20 user accounts', 'All Pro features', 'Check.hq integration', 'Priority support'],
   },
   {
-    id: 'business-pro',
-    name: 'Business Pro',
-    monthlyPrice: 450,
-    annualPrice: 4320,
-    monthlyPriceId: 'price_1TMEVTDeftkn5UiB8ix8vB7H',
-    annualPriceId: 'price_1TMEVTDeftkn5UiBod82jsRc',
-    description: 'Up to 50 users',
-    features: ['50 user accounts', 'All Business features', 'Advanced integrations', 'Dedicated support'],
-  },
-  {
     id: 'enterprise',
     name: 'Enterprise',
-    monthlyPrice: null,
-    annualPrice: null,
-    description: 'Custom pricing for 50+ users',
-    features: ['Custom user limits', 'All features included', 'Custom integrations', 'Dedicated account manager'],
-    enterprise: true,
+    monthlyPrice: 499,
+    annualPrice: 4999,
+    monthlyPriceId: 'price_1TMGsDDPghjun5PibOla4drH',
+    annualPriceId: 'price_1TMGsDDPghjun5PiuZZy6DoF',
+    description: 'Unlimited users',
+    features: ['Unlimited user accounts', 'All Business features', 'Custom integrations', 'Dedicated account manager'],
   },
 ];
 
@@ -93,7 +84,7 @@ export default function Billing() {
     setCheckoutLoading(plan.id);
     try {
       const priceId = billingInterval === 'monthly' ? plan.monthlyPriceId : plan.annualPriceId;
-      const res = await base44.functions.invoke('createCheckout', { price_id: priceId });
+      const res = await base44.functions.invoke('createCheckout', { price_id: priceId, plan_id: plan.id });
       const url = res.data?.url;
       if (!url) throw new Error('No checkout URL returned');
 
