@@ -11,6 +11,8 @@ const VALID_PRICE_IDS = new Set([
   'price_1TMGsDDPghjun5PiynXY1nGn', // Pro annual
   'price_1TMGsDDPghjun5PiCFdTX8Wi', // Business monthly
   'price_1TMGsDDPghjun5Pie9vyRaPb', // Business annual
+  'price_1TMGwDDPghjun5Pi7Q74Xy9U', // Business Pro monthly
+  'price_1TMGwDDPghjun5PiBFsszW9I', // Business Pro annual
   'price_1TMGsDDPghjun5PibOla4drH', // Enterprise monthly
   'price_1TMGsDDPghjun5PiuZZy6DoF', // Enterprise annual
 ]);

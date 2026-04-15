@@ -38,6 +38,16 @@ const PLANS = [
     features: ['20 user accounts', 'All Pro features', 'Check.hq integration', 'Priority support'],
   },
   {
+    id: 'business-pro',
+    name: 'Business Pro',
+    monthlyPrice: 450,
+    annualPrice: 4320,
+    monthlyPriceId: 'price_1TMGwDDPghjun5Pi7Q74Xy9U',
+    annualPriceId: 'price_1TMGwDDPghjun5PiBFsszW9I',
+    description: 'Up to 50 users',
+    features: ['50 user accounts', 'All Business features', 'Advanced integrations', 'Dedicated support'],
+  },
+  {
     id: 'enterprise',
     name: 'Enterprise',
     monthlyPrice: 499,
