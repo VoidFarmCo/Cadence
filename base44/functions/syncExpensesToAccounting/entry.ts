@@ -3,14 +3,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    
-    // Verify authentication and admin role (required for entity automations)
-    const user = await base44.auth.me().catch(() => null);
-    const allowedRoles = ['admin', 'owner', 'payroll_admin'];
-    if (!user || !allowedRoles.includes(user.role)) {
-      return Response.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 });
-    }
-    
     const payload = await req.json();
     const payroll_run_id = payload.payroll_run_id || payload.event?.entity_id;
 

@@ -3,13 +3,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    // Allow admin and owner roles (scheduled task)
-    const allowedRoles = ['admin', 'owner'];
-    if (!user || !allowedRoles.includes(user.role)) {
-      return Response.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 });
-    }
 
     // Get all accounts in trial
     const accounts = await base44.asServiceRole.entities.Account.filter({
