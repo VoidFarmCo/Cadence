@@ -65,7 +65,7 @@ export default function SchedulePage() {
           <h1 className="text-2xl font-bold font-display tracking-tight">Schedule</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage weekly shift assignments</p>
         </div>
-        <Button onClick={() => { setDraft({ worker_email: '', site_id: '', date: format(weekStart, 'yyyy-MM-dd'), start_time: '07:00', end_time: '15:00', notes: '' }); setShowAdd(true); }}><Plus className="w-4 h-4" /> Add Shift</Button>
+        <Button onClick={() => { setDraft({ worker_email: '', site_id: '', date: '', start_time: '07:00', end_time: '15:00', notes: '' }); setShowAdd(true); }}><Plus className="w-4 h-4" /> Add Shift</Button>
       </div>
 
       {/* Week nav */}
@@ -81,10 +81,19 @@ export default function SchedulePage() {
           const dayShifts = shifts.filter(s => s.date && isSameDay(parseISO(s.date), day) && s.status !== 'cancelled');
           const isToday = isSameDay(day, new Date());
           return (
-            <div key={day.toISOString()} className={`bg-card rounded-xl border p-3 min-h-[120px] ${isToday ? 'border-primary/40' : 'border-border'}`}>
-              <p className={`text-xs font-semibold mb-2 ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
-                {format(day, 'EEE')}<br /><span className={`text-base font-bold ${isToday ? 'text-primary' : 'text-foreground'}`}>{format(day, 'd')}</span>
-              </p>
+            <div key={day.toISOString()} className={`group bg-card rounded-xl border p-3 min-h-[120px] ${isToday ? 'border-primary/40' : 'border-border'}`}>
+              <div className="flex items-center justify-between mb-2">
+                <p className={`text-xs font-semibold ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {format(day, 'EEE')}<br /><span className={`text-base font-bold ${isToday ? 'text-primary' : 'text-foreground'}`}>{format(day, 'd')}</span>
+                </p>
+                <button
+                  onClick={() => { setDraft({ worker_email: '', site_id: '', date: format(day, 'yyyy-MM-dd'), start_time: '07:00', end_time: '15:00', notes: '' }); setShowAdd(true); }}
+                  className="opacity-0 group-hover:opacity-100 hover:opacity-100 focus:opacity-100 p-1 rounded-full hover:bg-primary/10 transition-opacity text-primary"
+                  title={`Add shift on ${format(day, 'EEE MMM d')}`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
               <div className="space-y-1.5">
                 {dayShifts.map(shift => (
                   <div key={shift.id} className="group relative bg-primary/5 border border-primary/10 rounded-lg p-2">
@@ -119,7 +128,25 @@ export default function SchedulePage() {
             </div>
             <div className="space-y-1.5">
               <Label>Date</Label>
-              <Input type="date" value={draft.date} onChange={e => setDraft(d => ({ ...d, date: e.target.value }))} />
+              <div className="grid grid-cols-7 gap-1">
+                {weekDays.map(day => {
+                  const val = format(day, 'yyyy-MM-dd');
+                  const isSelected = draft.date === val;
+                  const isToday = isSameDay(day, new Date());
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setDraft(d => ({ ...d, date: val }))}
+                      className={`flex flex-col items-center rounded-lg p-1.5 text-xs font-medium transition-colors border
+                        ${isSelected ? 'bg-primary text-primary-foreground border-primary' : isToday ? 'border-primary/40 text-primary bg-primary/5 hover:bg-primary/10' : 'border-border hover:bg-muted text-foreground'}`}
+                    >
+                      <span className="text-[10px] text-inherit opacity-70">{format(day, 'EEE')}</span>
+                      <span className="text-sm font-bold">{format(day, 'd')}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
