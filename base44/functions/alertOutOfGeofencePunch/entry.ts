@@ -4,19 +4,24 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    // This function is called by an entity automation (platform-internal).
-    // Accept calls from authenticated users of any role OR from the platform scheduler.
-    // Reject completely unauthenticated external requests.
-    const isAuthenticated = await base44.auth.isAuthenticated();
-    if (!isAuthenticated) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    // This function is invoked exclusively by a platform entity automation.
+    // Use service role to verify the punch record actually exists, preventing
+    // arbitrary authenticated users from triggering alerts with fake payloads.
     const payload = await req.json();
     const punch = payload.data;
+    const punchId = payload.event?.entity_id;
+
+    if (!punchId) {
+      return Response.json({ error: 'Forbidden: Missing event context' }, { status: 403 });
+    }
+
+    const verifiedPunch = await base44.asServiceRole.entities.Punch.get(punchId);
+    if (!verifiedPunch) {
+      return Response.json({ error: 'Forbidden: Punch record not found' }, { status: 403 });
+    }
 
     // Only alert if punch is out of geofence
-    if (!punch.out_of_geofence) {
+    if (!verifiedPunch.out_of_geofence) {
       return Response.json({ success: true, alerted: false });
     }
 
@@ -33,15 +38,15 @@ Deno.serve(async (req) => {
 
     for (const admin of admins) {
       try {
-        const punchTypeLabel = punch.punch_type.replace('_', ' ').toUpperCase();
-        const reasonText = punch.out_of_geofence_reason 
-          ? ` (Reason: ${punch.out_of_geofence_reason.replace('_', ' ')})` 
+        const punchTypeLabel = verifiedPunch.punch_type.replace('_', ' ').toUpperCase();
+        const reasonText = verifiedPunch.out_of_geofence_reason 
+          ? ` (Reason: ${verifiedPunch.out_of_geofence_reason.replace('_', ' ')})` 
           : '';
 
         await base44.integrations.Core.SendEmail({
           to: admin.email,
           subject: `⚠️ Out-of-Geofence Punch Alert`,
-          body: `A punch has been recorded outside the designated site boundary.\n\nWorker: ${punch.worker_name}\nEmail: ${punch.worker_email}\nPunch Type: ${punchTypeLabel}\nTime: ${punch.timestamp}\nSite: ${punch.site_name}${reasonText}\n\nPlease review this entry in the Time Approval section.\n\nBest regards,\nCadence System`
+          body: `A punch has been recorded outside the designated site boundary.\n\nWorker: ${verifiedPunch.worker_name}\nEmail: ${verifiedPunch.worker_email}\nPunch Type: ${punchTypeLabel}\nTime: ${verifiedPunch.timestamp}\nSite: ${verifiedPunch.site_name}${reasonText}\n\nPlease review this entry in the Time Approval section.\n\nBest regards,\nCadence System`
         });
 
         alertResults.push({
@@ -63,8 +68,8 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       alerted: true,
-      punch_id: punch.id,
-      worker: punch.worker_name,
+      punch_id: verifiedPunch.id,
+      worker: verifiedPunch.worker_name,
       admins_alerted: alertedCount,
       results: alertResults
     });
