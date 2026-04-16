@@ -6,7 +6,7 @@ import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
 import { createAuditLog } from '../services/audit.service';
-import { getCompanyId } from '../lib/company';
+import { getCompanyId, getCompanyWorkerEmails } from '../lib/company';
 import {
   finalizePayPeriodAndStartPayroll,
   submitPayrollRun,
@@ -75,7 +75,8 @@ router.post(
   requireRole('owner', 'payroll_admin'),
   async (req: AuthRequest, res: Response) => {
     try {
-      const results = await finalizePayPeriodAndStartPayroll(req.user!.email);
+      const companyId = await getCompanyId(req.user!.email);
+      const results = await finalizePayPeriodAndStartPayroll(req.user!.email, companyId);
 
       for (const result of results) {
         await createAuditLog({
@@ -104,6 +105,13 @@ router.post(
   requireRole('owner', 'payroll_admin'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
+      const existing = await prisma.payrollRun.findUnique({ where: { id: req.params.id }, include: { payPeriod: true } });
+      if (!existing || existing.payPeriod.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+
       const run = await submitPayrollRun(req.params.id, req.user!.email);
 
       await createAuditLog({
@@ -132,6 +140,13 @@ router.post(
   validate(completeSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
+      const existing = await prisma.payrollRun.findUnique({ where: { id: req.params.id }, include: { payPeriod: true } });
+      if (!existing || existing.payPeriod.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+
       const run = await completePayrollRun(req.params.id, req.body.worker_results || '');
 
       await createAuditLog({
@@ -162,6 +177,13 @@ router.put(
   validate(updatePayrollRunSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
+      const existing = await prisma.payrollRun.findUnique({ where: { id: req.params.id }, include: { payPeriod: true } });
+      if (!existing || existing.payPeriod.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+
       const updated = await prisma.payrollRun.update({
         where: { id: req.params.id },
         data: req.body,

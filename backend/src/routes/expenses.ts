@@ -118,6 +118,14 @@ router.put('/:id', authenticate, validate(updateExpenseSchema), async (req: Auth
       return;
     }
 
+    if (req.user!.role !== 'worker') {
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(existing.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+    }
+
     // Workers can only edit their own pending expenses (but not status)
     if (req.user!.role === 'worker') {
       if (existing.worker_email !== req.user!.email) {
@@ -157,9 +165,17 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    if (req.user!.role === 'worker' && expense.worker_email !== req.user!.email) {
-      res.status(403).json({ error: 'Insufficient permissions' });
-      return;
+    if (req.user!.role === 'worker') {
+      if (expense.worker_email !== req.user!.email) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+    } else {
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(expense.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
     }
 
     await prisma.expense.delete({ where: { id: req.params.id } });

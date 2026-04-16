@@ -94,6 +94,15 @@ const createTimeEntrySchema = z.object({
 router.post('/', authenticate, validate(createTimeEntrySchema), async (req: AuthRequest, res: Response) => {
   try {
     const workerEmail = req.body.worker_email || req.user!.email;
+
+    // Managers can only create entries for workers in their company
+    if (req.body.worker_email && req.user!.role !== 'worker') {
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(workerEmail)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+    }
     const workerProfile = await prisma.workerProfile.findFirst({
       where: { user_email: workerEmail },
     });
@@ -140,14 +149,21 @@ router.put('/:id', authenticate, validate(updateTimeEntrySchema), async (req: Au
       return;
     }
 
-    // Workers can only edit their own pending entries
     if (req.user!.role === 'worker') {
+      // Workers can only edit their own pending/rejected entries
       if (existing.worker_email !== req.user!.email) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
       if (existing.status !== 'pending' && existing.status !== 'rejected') {
         res.status(400).json({ error: 'Can only edit pending or rejected entries' });
+        return;
+      }
+    } else {
+      // Managers+ can only edit entries for their own company's workers
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(existing.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
     }
@@ -197,8 +213,13 @@ router.post(
         return;
       }
 
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
       const result = await prisma.timeEntry.updateMany({
-        where: { id: { in: ids }, status: { in: ['pending', 'submitted'] } },
+        where: {
+          id: { in: ids },
+          status: { in: ['pending', 'submitted'] },
+          worker_email: { in: companyEmails },
+        },
         data: { status: 'approved' },
       });
 
@@ -212,6 +233,16 @@ router.post(
 // Delete time entry
 router.delete('/:id', authenticate, requireMinRole('manager'), async (req: AuthRequest, res: Response) => {
   try {
+    const entry = await prisma.timeEntry.findUnique({ where: { id: req.params.id } });
+    if (!entry) {
+      res.status(404).json({ error: 'Time entry not found' });
+      return;
+    }
+    const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+    if (!companyEmails.includes(entry.worker_email)) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
     await prisma.timeEntry.delete({ where: { id: req.params.id } });
     res.json({ message: 'Time entry deleted' });
   } catch (error) {

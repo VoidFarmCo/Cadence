@@ -1,13 +1,14 @@
 import prisma from '../lib/prisma';
 
-export async function finalizePayPeriodAndStartPayroll(performedBy: string) {
+export async function finalizePayPeriodAndStartPayroll(performedBy: string, companyId: string | null) {
   const now = new Date();
 
-  // Find open pay periods whose end_date has passed
+  // Find open pay periods whose end_date has passed, scoped to this company
   const openPeriods = await prisma.payPeriod.findMany({
     where: {
       status: 'open',
       end_date: { lt: now },
+      company_id: companyId,
     },
   });
 

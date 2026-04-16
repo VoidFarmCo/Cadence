@@ -35,12 +35,17 @@ router.get('/', authenticate, requireMinRole('manager'), async (req: AuthRequest
 // Get single pay period
 router.get('/:id', authenticate, requireMinRole('manager'), async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const period = await prisma.payPeriod.findUnique({
       where: { id: req.params.id },
       include: { timeEntries: true, payrollRuns: true },
     });
     if (!period) {
       res.status(404).json({ error: 'Pay period not found' });
+      return;
+    }
+    if (period.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
     res.json(period);

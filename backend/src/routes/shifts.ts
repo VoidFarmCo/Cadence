@@ -5,7 +5,7 @@ import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
-import { getCompanyWorkerEmails } from '../lib/company';
+import { getCompanyWorkerEmails, getCompanyId } from '../lib/company';
 
 const router = Router();
 
@@ -86,6 +86,12 @@ router.post(
   validate(createShiftSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(req.body.worker_email)) {
+        res.status(403).json({ error: 'Worker not found in your company' });
+        return;
+      }
+
       const workerProfile = await prisma.workerProfile.findFirst({
         where: { user_email: req.body.worker_email },
       });
@@ -125,6 +131,17 @@ router.put(
   validate(updateShiftSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const existing = await prisma.shift.findUnique({ where: { id: req.params.id } });
+      if (!existing) {
+        res.status(404).json({ error: 'Shift not found' });
+        return;
+      }
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(existing.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+
       const data: any = { ...req.body };
       if (data.date) data.date = new Date(data.date);
 
@@ -147,6 +164,16 @@ router.delete(
   requireMinRole('manager'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const existing = await prisma.shift.findUnique({ where: { id: req.params.id } });
+      if (!existing) {
+        res.status(404).json({ error: 'Shift not found' });
+        return;
+      }
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(existing.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
       await prisma.shift.delete({ where: { id: req.params.id } });
       res.json({ message: 'Shift deleted' });
     } catch (error) {

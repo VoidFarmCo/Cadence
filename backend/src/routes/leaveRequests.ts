@@ -111,6 +111,12 @@ router.post(
         return;
       }
 
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(existing.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+
       const updated = await prisma.leaveRequest.update({
         where: { id: req.params.id },
         data: {

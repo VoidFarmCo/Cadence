@@ -30,9 +30,14 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 // Get single site
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const site = await prisma.site.findUnique({ where: { id: req.params.id } });
     if (!site) {
       res.status(404).json({ error: 'Site not found' });
+      return;
+    }
+    if (site.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
     res.json(site);
@@ -84,6 +89,16 @@ router.put(
   validate(updateSiteSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
+      const site = await prisma.site.findUnique({ where: { id: req.params.id } });
+      if (!site) {
+        res.status(404).json({ error: 'Site not found' });
+        return;
+      }
+      if (site.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
       const updated = await prisma.site.update({
         where: { id: req.params.id },
         data: req.body,
@@ -102,6 +117,16 @@ router.delete(
   requireMinRole('owner'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
+      const site = await prisma.site.findUnique({ where: { id: req.params.id } });
+      if (!site) {
+        res.status(404).json({ error: 'Site not found' });
+        return;
+      }
+      if (site.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
       await prisma.site.delete({ where: { id: req.params.id } });
       res.json({ message: 'Site deleted' });
     } catch (error) {
