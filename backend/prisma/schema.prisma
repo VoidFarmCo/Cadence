@@ -578,7 +578,7 @@ model AuditLog {
   details       String?
   created_at    DateTime    @default(now())
 
-  performer User @relation("AuditPerformer", fields: [performed_by], references: [id])
+  performer User @relation("AuditPerformer", fields: [performed_by], references: [id], onDelete: Cascade)
 
   @@index([entity_type, entity_id])
   @@index([performed_by])
