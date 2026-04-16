@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { getSocket } from '@/lib/socket';
 
 // Fix leaflet default icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -29,8 +30,11 @@ export default function MapView() {
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, 30000);
-    return () => clearInterval(interval);
+
+    // Update map only when a worker punches in or out — no polling
+    const socket = getSocket();
+    socket.on('punch:created', load);
+    return () => socket.off('punch:created', load);
   }, []);
 
   async function load() {
@@ -73,7 +77,7 @@ export default function MapView() {
         <div>
           <h1 className="text-2xl font-bold font-display tracking-tight">Live Field Map</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {activePunches.length} worker{activePunches.length !== 1 ? 's' : ''} currently clocked in · refreshes every 30s
+            {activePunches.length} worker{activePunches.length !== 1 ? 's' : ''} currently clocked in · updates on clock in/out
           </p>
         </div>
       </div>
