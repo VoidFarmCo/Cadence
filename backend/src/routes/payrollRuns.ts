@@ -68,6 +68,47 @@ router.get(
   }
 );
 
+// Create a payroll run directly
+const createPayrollRunSchema = z.object({
+  pay_period_id: z.string().uuid(),
+  pay_period_label: z.string().optional(),
+  status: z.enum(['draft', 'reviewing', 'submitted', 'completed', 'failed']).optional(),
+  total_regular_hours: z.number().min(0).optional(),
+  total_overtime_hours: z.number().min(0).optional(),
+  worker_count: z.number().int().min(0).optional(),
+  submitted_at: z.string().datetime().optional(),
+  submitted_by: z.string().optional(),
+  worker_results: z.string().optional(),
+});
+
+router.post(
+  '/',
+  authenticate,
+  requireRole('owner', 'payroll_admin'),
+  validate(createPayrollRunSchema),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const companyId = await getCompanyId(req.user!.email);
+      // Verify the pay period belongs to this company
+      const period = await prisma.payPeriod.findUnique({
+        where: { id: req.body.pay_period_id },
+      });
+      if (!period || period.company_id !== companyId) {
+        res.status(403).json({ error: 'Pay period not found or insufficient permissions' });
+        return;
+      }
+
+      const data: any = { ...req.body };
+      if (data.submitted_at) data.submitted_at = new Date(data.submitted_at);
+
+      const run = await prisma.payrollRun.create({ data });
+      res.status(201).json(run);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to create payroll run' });
+    }
+  }
+);
+
 // Finalize pay periods and start payroll
 router.post(
   '/finalize',
