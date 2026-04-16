@@ -16,7 +16,7 @@ export default function Home() {
       <nav className="sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="https://media.base44.com/images/public/69db595f420acc2fe622536d/9b4a5552a_cadence_logo_v3b.png" alt="Cadence" className="w-8 h-8 object-contain" />
+            <img src="/cadence-logo.png" alt="Cadence" className="w-8 h-8 object-contain" />
             <span className="font-display font-bold text-xl text-primary">Cadence</span>
           </div>
           <Button onClick={handleSignIn} variant="default">

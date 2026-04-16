@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import api from '@/api/apiClient';
+import { useAuth } from '@/lib/AuthContext';
 import Home from './Home';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ function SuperAdminSelector({ companyName, onChoice }) {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
           <img
-            src="https://media.base44.com/images/public/69db595f420acc2fe622536d/9b4a5552a_cadence_logo_v3b.png"
+            src="/cadence-logo.png"
             alt="Cadence"
             className="w-8 h-8 object-contain"
           />
@@ -58,24 +59,25 @@ function SuperAdminSelector({ companyName, onChoice }) {
 }
 
 export default function RoleRouter() {
-  const [role, setRole] = useState(null);
-  const [platformRole, setPlatformRole] = useState(null);
+  const { user, isAuthenticated, isLoadingAuth } = useAuth();
+  const [workerRole, setWorkerRole] = useState(null);
   const [companyName, setCompanyName] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [choice, setChoice] = useState(null); // 'admin' | 'company' | null
 
   useEffect(() => {
-    async function check() {
+    // Skip profile fetch until auth is resolved
+    if (isLoadingAuth) return;
+    if (!isAuthenticated || !user) {
+      setLoading(false);
+      return;
+    }
+
+    async function fetchProfile() {
       try {
-        const { data: me } = await api.get('/api/auth/me');
-        setIsAuthenticated(true);
-        setPlatformRole(me.platform_role);
-
         const { data: profile } = await api.get('/api/worker-profiles/me');
-        setRole(profile.role || 'worker');
+        setWorkerRole(profile.role || 'worker');
 
-        // Try to get company name for display
         if (profile.company_id) {
           try {
             const { data: company } = await api.get(`/api/companies/${profile.company_id}`);
@@ -85,16 +87,16 @@ export default function RoleRouter() {
           }
         }
       } catch {
-        setIsAuthenticated(false);
-        setRole(null);
+        // If no worker profile found, default to owner role (they registered but have no profile yet)
+        setWorkerRole(user.role || 'owner');
       } finally {
         setLoading(false);
       }
     }
-    check();
-  }, []);
+    fetchProfile();
+  }, [isLoadingAuth, isAuthenticated, user]);
 
-  if (loading) {
+  if (isLoadingAuth || loading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
@@ -102,12 +104,12 @@ export default function RoleRouter() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     return <Home />;
   }
 
   // Superadmins get a choice screen
-  if (platformRole === 'superadmin' && !choice) {
+  if (user.platform_role === 'superadmin' && !choice) {
     return (
       <SuperAdminSelector
         companyName={companyName}
@@ -120,6 +122,6 @@ export default function RoleRouter() {
     return <Navigate to="/admin" replace />;
   }
 
-  const isEmployer = ['owner', 'payroll_admin', 'manager'].includes(role);
+  const isEmployer = ['owner', 'payroll_admin', 'manager'].includes(workerRole);
   return <Navigate to={isEmployer ? '/dashboard' : '/worker-home'} replace />;
 }

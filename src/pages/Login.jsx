@@ -1,17 +1,22 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import api from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 export default function Login() {
-  const { login, register } = useAuth();
+  const { login, register, isAuthenticated, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState('login'); // 'login' | 'register' | 'forgot'
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Redirect to home if already logged in
+  if (!isLoadingAuth && isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
 
   const [form, setForm] = useState({
     email: '', password: '', full_name: '', company_name: '',
@@ -54,7 +59,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
           <img
-            src="https://media.base44.com/images/public/69db595f420acc2fe622536d/9b4a5552a_cadence_logo_v3b.png"
+            src="/cadence-logo.png"
             alt="Cadence"
             className="w-8 h-8 object-contain"
           />

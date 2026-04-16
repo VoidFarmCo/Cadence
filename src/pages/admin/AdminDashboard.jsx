@@ -248,7 +248,7 @@ export default function AdminDashboard() {
       <div className="border-b border-border bg-card px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img
-            src="https://media.base44.com/images/public/69db595f420acc2fe622536d/9b4a5552a_cadence_logo_v3b.png"
+            src="/cadence-logo.png"
             alt="Cadence"
             className="w-7 h-7 object-contain"
           />

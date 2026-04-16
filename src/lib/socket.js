@@ -9,11 +9,12 @@ export function getSocket() {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   socket = io(apiUrl, {
-    withCredentials: true, // keep cookie fallback
+    withCredentials: true,
     transports: ['websocket', 'polling'],
     autoConnect: true,
-    auth: {
-      token: getAccessToken(),
+    auth: (cb) => {
+      // Called on every connect/reconnect — always sends fresh token
+      cb({ token: getAccessToken() });
     },
   });
 

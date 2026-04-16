@@ -29,7 +29,7 @@ export default function EmployerSidebar({ user }) {
     <aside className="hidden lg:flex flex-col w-64 bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
       <div className="p-6 border-b border-sidebar-border">
         <Link to="/" className="flex items-center gap-3">
-          <img src="https://media.base44.com/images/public/69db595f420acc2fe622536d/9b4a5552a_cadence_logo_v3b.png" alt="Cadence" className="w-8 h-8 object-contain" />
+          <img src="/cadence-logo.png" alt="Cadence" className="w-8 h-8 object-contain" />
           <div>
             <h1 className="text-sm font-bold text-sidebar-foreground font-display tracking-tight">Cadence</h1>
             <p className="text-[11px] text-sidebar-foreground/50">Workforce Management</p>
