@@ -205,6 +205,7 @@ export default function AdminDashboard() {
   // ─── Quick actions ─────────────────────────────────────────────────────────
 
   async function updateAccountStatus(accountId, status) {
+    console.log('updateAccountStatus called:', accountId, status);
     try {
       await api.post(`/api/admin/accounts/${accountId}/update-status`, { status });
       loadAccounts();
@@ -216,6 +217,7 @@ export default function AdminDashboard() {
   }
 
   async function togglePlatformRole(userId, currentRole) {
+    console.log('togglePlatformRole called:', userId, currentRole);
     const newRole = currentRole === 'superadmin' ? 'user' : 'superadmin';
     if (newRole === 'superadmin' && !confirm('Grant superadmin access to this user?')) return;
     if (newRole === 'user' && !confirm('Revoke superadmin access from this user?')) return;
@@ -229,9 +231,12 @@ export default function AdminDashboard() {
   }
 
   async function deleteUser(userId, email) {
+    console.log('deleteUser called:', userId, email);
     if (!confirm(`Permanently delete ${email}? This removes their profile, audit logs, and user record. Cannot be undone.`)) return;
     try {
-      await api.delete(`/api/admin/users/${userId}`);
+      console.log('deleteUser confirmed, sending request...');
+      const response = await api.delete(`/api/admin/users/${userId}`);
+      console.log('deleteUser response:', response);
       loadUsers();
       loadStats();
       alert(`Deleted user ${email}`);
@@ -242,9 +247,12 @@ export default function AdminDashboard() {
   }
 
   async function purgeCompany(companyId, companyName) {
+    console.log('purgeCompany called:', companyId, companyName);
     if (!confirm(`Purge ALL data for ${companyName}? This deletes sites, workers, time entries, payroll, everything. Owner profile is preserved. Cannot be undone.`)) return;
     try {
-      await api.delete(`/api/admin/companies/${companyId}/purge`);
+      console.log('purgeCompany confirmed, sending request...');
+      const response = await api.delete(`/api/admin/companies/${companyId}/purge`);
+      console.log('purgeCompany response:', response);
       loadCompanies();
       loadStats();
       alert(`Purged all data for ${companyName}`);
