@@ -1,7 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, MapPin, ClipboardCheck, CalendarOff, DollarSign, BarChart3, Settings, LogOut, FileText, Map, CalendarDays, CreditCard, PieChart, UserCheck } from 'lucide-react';
-
-
+import { useAuth } from '@/lib/AuthContext';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -23,6 +22,7 @@ const navItems = [
 
 export default function EmployerSidebar({ user }) {
   const { pathname } = useLocation();
+  const { logout } = useAuth();
 
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
@@ -67,12 +67,9 @@ export default function EmployerSidebar({ user }) {
             <p className="text-[10px] text-sidebar-foreground/50 capitalize">{user?.role || 'owner'}</p>
           </div>
           <button
-            onClick={() => {
-              localStorage.removeItem('accessToken');
-              localStorage.removeItem('refreshToken');
-              window.location.href = '/';
-            }}
+            onClick={() => logout('/login')}
             className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
+            title="Sign out"
           >
             <LogOut className="w-4 h-4" />
           </button>

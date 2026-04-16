@@ -9,8 +9,10 @@ import { Label } from '@/components/ui/label';
 import { DollarSign, MapPin, LogOut, Shield, Smartphone, AlertTriangle, Pencil, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import WorkerDocuments from '@/components/documents/WorkerDocuments';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function ProfilePage() {
+  const { logout } = useAuth();
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -198,11 +200,7 @@ export default function ProfilePage() {
         </Button>
       </div>
 
-      <Button variant="outline" className="w-full gap-2 text-destructive select-none" onClick={() => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/';
-      }}>
+      <Button variant="outline" className="w-full gap-2 text-destructive select-none" onClick={() => logout('/login')}>
         <LogOut className="w-4 h-4" />Sign Out
       </Button>
 

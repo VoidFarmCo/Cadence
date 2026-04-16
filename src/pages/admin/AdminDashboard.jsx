@@ -122,7 +122,7 @@ export default function AdminDashboard() {
           <Button size="sm" variant="ghost" onClick={load}>
             <RefreshCw className="w-4 h-4 mr-1" />Refresh
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => logout('/')}>
+          <Button size="sm" variant="ghost" onClick={() => logout('/login')}>
             <LogOut className="w-4 h-4 mr-1" />Sign Out
           </Button>
         </div>
