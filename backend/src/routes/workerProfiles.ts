@@ -6,7 +6,7 @@ import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
 import { createAuditLog } from '../services/audit.service';
-import { getCompanyId } from '../lib/company';
+import { getCompanyId, getCompanyWorkerEmails } from '../lib/company';
 
 const router = Router();
 
@@ -145,6 +145,13 @@ router.delete(
       });
       if (!profile) {
         res.status(404).json({ error: 'Profile not found' });
+        return;
+      }
+
+      // Ensure owner can only remove workers from their own company
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(profile.user_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
 
