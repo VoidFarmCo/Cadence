@@ -10,6 +10,7 @@ export async function createAuditLog(params: {
   oldValue?: unknown;
   newValue?: unknown;
   details?: string;
+  companyId?: string | null;
 }): Promise<void> {
   try {
     await prisma.auditLog.create({
@@ -22,6 +23,7 @@ export async function createAuditLog(params: {
         old_value: params.oldValue ? JSON.stringify(params.oldValue) : null,
         new_value: params.newValue ? JSON.stringify(params.newValue) : null,
         details: params.details,
+        company_id: params.companyId || null,
       },
     });
   } catch (error) {

@@ -5,7 +5,7 @@ import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
-import { getCompanyId } from '../lib/company';
+import { getCompanyId, parsePagination, paginatedResponse } from '../lib/company';
 
 const router = Router();
 
@@ -14,14 +14,23 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const companyId = await getCompanyId(req.user!.email);
     if (!companyId) {
-      res.json([]);
+      res.json(paginatedResponse([], 0, 1, 50));
       return;
     }
-    const sites = await prisma.site.findMany({
-      where: { company_id: companyId },
-      orderBy: { name: 'asc' },
+
+    const where: any = { company_id: companyId };
+
+    const { skip, take, page, limit } = parsePagination({
+      page: qs(req.query.page),
+      limit: qs(req.query.limit),
     });
-    res.json(sites);
+
+    const [sites, total] = await Promise.all([
+      prisma.site.findMany({ where, orderBy: { name: 'asc' }, skip, take }),
+      prisma.site.count({ where }),
+    ]);
+
+    res.json(paginatedResponse(sites, total, page, limit));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch sites' });
   }

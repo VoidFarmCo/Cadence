@@ -3,7 +3,7 @@ import prisma from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { AuthRequest } from '../types';
-import { getCompanyWorkerEmails } from '../lib/company';
+import { getCompanyId } from '../lib/company';
 
 const router = Router();
 
@@ -15,8 +15,10 @@ router.get(
   async (req: AuthRequest, res: Response) => {
     try {
       const { pay_period_id, start_date, end_date } = req.query;
-      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
-      const where: any = { worker_email: { in: companyEmails } };
+      const companyId = await getCompanyId(req.user!.email);
+      if (!companyId) { res.json({ workers: [], totals: { regular_hours: 0, overtime_hours: 0, total_hours: 0, worker_count: 0 } }); return; }
+
+      const where: any = { company_id: companyId, status: { in: ['approved', 'submitted'] } };
 
       if (pay_period_id) {
         where.pay_period_id = pay_period_id;
@@ -27,9 +29,7 @@ router.get(
         if (end_date) where.date.lte = new Date(end_date as string);
       }
 
-      const entries = await prisma.timeEntry.findMany({
-        where: { ...where, status: { in: ['approved', 'submitted'] } },
-      });
+      const entries = await prisma.timeEntry.findMany({ where });
 
       // Group by worker
       const byWorker: Record<string, {
@@ -85,14 +85,12 @@ router.get(
   async (req: AuthRequest, res: Response) => {
     try {
       const { worker_email, site_id, start_date, end_date, status } = req.query;
-      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      const companyId = await getCompanyId(req.user!.email);
+      if (!companyId) { res.json([]); return; }
 
-      const where: any = { worker_email: { in: companyEmails } };
+      const where: any = { company_id: companyId };
 
-      if (worker_email) {
-        const wEmail = worker_email as string;
-        where.worker_email = companyEmails.includes(wEmail) ? wEmail : '__none__';
-      }
+      if (worker_email) where.worker_email = worker_email as string;
       if (site_id) where.site_id = site_id;
       if (status) where.status = status;
       if (start_date || end_date) {
@@ -121,14 +119,12 @@ router.get(
   async (req: AuthRequest, res: Response) => {
     try {
       const { worker_email, category, start_date, end_date, status } = req.query;
-      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      const companyId = await getCompanyId(req.user!.email);
+      if (!companyId) { res.json({ expenses: [], totalAmount: 0, byCategory: {} }); return; }
 
-      const where: any = { worker_email: { in: companyEmails } };
+      const where: any = { company_id: companyId };
 
-      if (worker_email) {
-        const wEmail = worker_email as string;
-        where.worker_email = companyEmails.includes(wEmail) ? wEmail : '__none__';
-      }
+      if (worker_email) where.worker_email = worker_email as string;
       if (category) where.category = category;
       if (status) where.status = status;
       if (start_date || end_date) {
@@ -163,9 +159,10 @@ router.get(
   async (req: AuthRequest, res: Response) => {
     try {
       const { start_date, end_date } = req.query;
-      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      const companyId = await getCompanyId(req.user!.email);
+      if (!companyId) { res.json({ workers: [] }); return; }
 
-      const where: any = { worker_email: { in: companyEmails } };
+      const where: any = { company_id: companyId };
 
       if (start_date || end_date) {
         where.timestamp = {};

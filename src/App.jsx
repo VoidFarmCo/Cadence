@@ -1,10 +1,11 @@
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 import RoleRouter from './pages/RoleRouter';
 import Login from './pages/Login';
@@ -50,61 +51,52 @@ function useDarkMode() {
 
 const AuthenticatedApp = () => {
   useDarkMode();
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
-  // Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  // Handle authentication errors
-  if (authError?.type === 'auth_required' && window.location.pathname !== '/') {
-    navigateToLogin();
-    return null;
-  }
-
-  // Render the main app
   return (
     <Routes>
-      <Route path="/" element={<RoleRouter />} />
+      {/* Public routes — no auth required */}
       <Route path="/login" element={<Login />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/app-preview" element={<AppPreview />} />
-      {/* Employer Routes */}
-      <Route element={<EmployerLayout />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/people" element={<People />} />
-        <Route path="/sites" element={<Sites />} />
-        <Route path="/time-approval" element={<TimeApproval />} />
-        <Route path="/time-off-admin" element={<TimeOffAdmin />} />
-        <Route path="/payroll" element={<PayrollRuns />} />
-        <Route path="/payroll-analytics" element={<PayrollAnalytics />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/billing" element={<Billing />} />
-        <Route path="/settings/billing" element={<Billing />} />
-        <Route path="/tax-forms" element={<TaxForms />} />
-        <Route path="/map" element={<MapView />} />
-        <Route path="/schedule" element={<SchedulePage />} />
-        <Route path="/users" element={<Users />} />
+
+      {/* Protected routes — require authentication */}
+      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+        <Route path="/" element={<RoleRouter />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/app-preview" element={<AppPreview />} />
+
+        {/* Employer Routes */}
+        <Route element={<EmployerLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/people" element={<People />} />
+          <Route path="/sites" element={<Sites />} />
+          <Route path="/time-approval" element={<TimeApproval />} />
+          <Route path="/time-off-admin" element={<TimeOffAdmin />} />
+          <Route path="/payroll" element={<PayrollRuns />} />
+          <Route path="/payroll-analytics" element={<PayrollAnalytics />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/billing" element={<Billing />} />
+          <Route path="/settings/billing" element={<Billing />} />
+          <Route path="/tax-forms" element={<TaxForms />} />
+          <Route path="/map" element={<MapView />} />
+          <Route path="/schedule" element={<SchedulePage />} />
+          <Route path="/users" element={<Users />} />
+        </Route>
+
+        {/* Worker Routes */}
+        <Route element={<WorkerLayout />}>
+          <Route path="/clock" element={<ClockPage />} />
+          <Route path="/timesheet" element={<TimesheetPage />} />
+          <Route path="/time-off" element={<TimeOffPage />} />
+          <Route path="/expenses" element={<ExpensesPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/worker-home" element={<WorkerHome />} />
+          <Route path="/tax-forms-worker" element={<TaxFormPage />} />
+          <Route path="/deductions" element={<DeductionsPage />} />
+        </Route>
       </Route>
-      {/* Worker Routes */}
-      <Route element={<WorkerLayout />}>
-        <Route path="/clock" element={<ClockPage />} />
-        <Route path="/timesheet" element={<TimesheetPage />} />
-        <Route path="/time-off" element={<TimeOffPage />} />
-        <Route path="/expenses" element={<ExpensesPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/worker-home" element={<WorkerHome />} />
-        <Route path="/tax-forms-worker" element={<TaxFormPage />} />
-        <Route path="/deductions" element={<DeductionsPage />} />
-      </Route>
+
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
