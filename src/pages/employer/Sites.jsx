@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { MapPin, Plus, Navigation, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import SiteGeofenceEditor from '@/components/sites/SiteGeofenceEditor';
@@ -80,7 +80,7 @@ export default function Sites() {
             <Button className="gap-2"><Plus className="w-4 h-4" />Add Site</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Add New Site</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Add New Site</DialogTitle><DialogDescription className="sr-only">Add a new work site with GPS coordinates</DialogDescription></DialogHeader>
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label>Site Name</Label>

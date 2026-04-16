@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -216,6 +216,7 @@ export default function TaxForms() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Send Tax / HR Form</DialogTitle>
+            <DialogDescription className="sr-only">Select a form type and assign it to a worker</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
@@ -266,6 +267,7 @@ export default function TaxForms() {
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{showView?.title} — Response</DialogTitle>
+            <DialogDescription className="sr-only">View the submitted form response</DialogDescription>
           </DialogHeader>
           {showView?.response_data && (() => {
             const data = JSON.parse(showView.response_data);

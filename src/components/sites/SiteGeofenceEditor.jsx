@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -51,6 +51,7 @@ export default function SiteGeofenceEditor({ site, open, onClose, onSave }) {
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Adjust Geofence — {site.name}</DialogTitle>
+          <DialogDescription className="sr-only">Adjust the geofence radius for this site</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 mt-2">
