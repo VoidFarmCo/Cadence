@@ -2,7 +2,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
-    // Read body first before SDK consumes the request
     const body = await req.json();
     const base44 = createClientFromRequest(req);
 
@@ -38,12 +37,26 @@ Deno.serve(async (req) => {
         pay_rate: pay_rate ? parseFloat(pay_rate) : undefined,
         status: 'pending',
       });
+    } else {
+      // Update existing profile with new info
+      await base44.asServiceRole.entities.WorkerProfile.update(existing[0].id, {
+        full_name: full_name || existing[0].full_name,
+        phone: phone || existing[0].phone,
+        worker_type: worker_type || existing[0].worker_type,
+        role: inviteeRole,
+        pay_rate: pay_rate ? parseFloat(pay_rate) : existing[0].pay_rate,
+      });
     }
 
     // Employer-side roles need platform 'admin' so they can access employer features. Workers get 'user'.
     const platformRole = ['owner', 'manager', 'payroll_admin'].includes(inviteeRole) ? 'admin' : 'user';
 
-    await base44.auth.inviteUser(email, platformRole);
+    try {
+      await base44.asServiceRole.users.inviteUser(email, platformRole);
+    } catch (inviteErr) {
+      // If user already exists in the platform, that's fine — profile is already created/updated
+      console.warn(`Invite skipped for ${email}: ${inviteErr.message}`);
+    }
 
     return Response.json({ success: true });
   } catch (error) {
