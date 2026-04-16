@@ -39,12 +39,14 @@ export default function People() {
       toast.error('Name and email are required');
       return;
     }
-    await base44.entities.WorkerProfile.create({
-      ...form,
-      pay_rate: form.pay_rate ? parseFloat(form.pay_rate) : undefined,
-      status: 'pending'
+    await base44.functions.invoke('inviteWorker', {
+      email: form.user_email,
+      appRole: form.role,
+      full_name: form.full_name,
+      phone: form.phone,
+      worker_type: form.worker_type,
+      pay_rate: form.pay_rate,
     });
-    await base44.functions.invoke('inviteWorker', { email: form.user_email, appRole: form.role });
     toast.success(`Invited ${form.full_name}`);
     setDialogOpen(false);
     setForm({ full_name: '', user_email: '', phone: '', worker_type: 'employee', role: 'worker', pay_rate: '' });
