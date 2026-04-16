@@ -10,6 +10,7 @@ import RoleRouter from './pages/RoleRouter';
 import Login from './pages/Login';
 import AcceptInvite from './pages/AcceptInvite';
 import ResetPassword from './pages/ResetPassword';
+import AdminDashboard from './pages/admin/AdminDashboard';
 import AppPreview from './pages/AppPreview';
 import EmployerLayout from './components/EmployerLayout';
 import WorkerLayout from './components/WorkerLayout';
@@ -73,6 +74,7 @@ const AuthenticatedApp = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/app-preview" element={<AppPreview />} />
       {/* Employer Routes */}
       <Route element={<EmployerLayout />}>

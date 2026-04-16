@@ -28,6 +28,7 @@ import workerDocumentRoutes from './routes/workerDocuments';
 import auditLogRoutes from './routes/auditLogs';
 import stripeRoutes from './routes/stripe';
 import reportRoutes from './routes/reports';
+import adminRoutes from './routes/admin';
 import { processTrialReminders } from './services/trial.service';
 
 const app = express();
@@ -115,6 +116,7 @@ app.use('/api/worker-documents', workerDocumentRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/admin', adminRoutes);
 
 // ─── Error Handler (must be last) ──────────────────────────────────────────
 
