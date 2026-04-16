@@ -18,9 +18,11 @@ export default function RoleRouter() {
         if (authed) {
           const me = await base44.auth.me();
 
-          // Promote to owner first so RLS allows querying WorkerProfile
+          // Try to find an existing WorkerProfile using a temporary owner promotion
+          // only if user doesn't already have a known app role
           const knownRoles = ['owner', 'admin', 'manager', 'payroll_admin', 'worker'];
-          if (!knownRoles.includes(me.role)) {
+          const needsPromotion = !knownRoles.includes(me.role);
+          if (needsPromotion) {
             await base44.auth.updateMe({ role: 'owner' });
           }
 
@@ -33,9 +35,8 @@ export default function RoleRouter() {
           }
 
           if (profiles.length === 0) {
-            // First-time user — ensure owner role is set
+            // Brand new user with no profile — make them owner and onboard
             await base44.auth.updateMe({ role: 'owner' });
-
             setOnboardingStatus('Setting up your account...');
 
             const now = new Date();
@@ -70,9 +71,16 @@ export default function RoleRouter() {
 
             setRole('owner');
           } else {
-            // Re-fetch the user to get the latest role (not the cached pre-promotion value)
+            // Existing user — use their WorkerProfile role as the source of truth
+            const profileRole = profiles[0].role || 'worker';
+
+            // If their platform role doesn't match their WorkerProfile role, sync it
             const freshMe = await base44.auth.me();
-            setRole(freshMe.role || 'worker');
+            if (freshMe.role !== profileRole) {
+              await base44.auth.updateMe({ role: profileRole });
+            }
+
+            setRole(profileRole);
           }
         }
       } catch (e) {
