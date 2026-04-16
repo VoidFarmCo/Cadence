@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -6,18 +6,9 @@ import { CheckCircle2, Clock, FileText, DollarSign, Users, MapPin, ArrowRight, S
 
 export default function Home() {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    setIsAuthenticated(!!token);
-  }, []);
-
   const handleSignIn = () => {
-    window.location.href = '/login';
+    navigate('/login');
   };
-
-  if (isAuthenticated === null) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/30">
@@ -28,11 +19,9 @@ export default function Home() {
             <img src="https://media.base44.com/images/public/69db595f420acc2fe622536d/9b4a5552a_cadence_logo_v3b.png" alt="Cadence" className="w-8 h-8 object-contain" />
             <span className="font-display font-bold text-xl text-primary">Cadence</span>
           </div>
-          {!isAuthenticated && (
-            <Button onClick={handleSignIn} variant="default">
-              Sign In
-            </Button>
-          )}
+          <Button onClick={handleSignIn} variant="default">
+            Sign In
+          </Button>
         </div>
       </nav>
 

@@ -7,6 +7,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 
 import RoleRouter from './pages/RoleRouter';
+import Login from './pages/Login';
 import AppPreview from './pages/AppPreview';
 import EmployerLayout from './components/EmployerLayout';
 import WorkerLayout from './components/WorkerLayout';
@@ -67,6 +68,7 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       <Route path="/" element={<RoleRouter />} />
+      <Route path="/login" element={<Login />} />
       <Route path="/app-preview" element={<AppPreview />} />
       {/* Employer Routes */}
       <Route element={<EmployerLayout />}>
