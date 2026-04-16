@@ -9,6 +9,7 @@ import { env } from '../config/env';
 import { AuthRequest, VALID_PRICE_IDS, STRIPE_PRICE_IDS } from '../types';
 import { createAuditLog } from '../services/audit.service';
 import { sendEmail } from '../services/email.service';
+import { getIO } from '../lib/socket';
 
 const router = Router();
 
@@ -152,6 +153,7 @@ router.post(
                 lock_reason: null,
               },
             });
+            try { getIO().emit('account:updated', { id: accountId }); } catch {}
           }
           break;
         }
@@ -165,6 +167,7 @@ router.post(
               status: subscription.status === 'active' ? 'active' : undefined,
             },
           });
+          try { getIO().emit('account:updated', { subscription_id: subscription.id }); } catch {}
           break;
         }
 
@@ -177,6 +180,7 @@ router.post(
               stripe_subscription_status: 'canceled',
             },
           });
+          try { getIO().emit('account:updated', { subscription_id: subscription.id }); } catch {}
           break;
         }
 
@@ -191,6 +195,7 @@ router.post(
                 where: { id: account.id },
                 data: { status: 'locked', lock_reason: 'payment_failed' },
               });
+              try { getIO().emit('account:updated', { id: account.id }); } catch {}
               await sendEmail(
                 account.owner_email,
                 'Action required: Payment failed for Cadence',

@@ -18,6 +18,7 @@ import {
   acceptInvite,
   generateResetToken,
 } from '../services/auth.service';
+import { getIO } from '../lib/socket';
 
 const router = Router();
 
@@ -104,6 +105,9 @@ router.post('/register', validate(registerSchema), async (req: AuthRequest, res:
       performedBy: user.id,
       details: 'Account registration',
     });
+
+    // Notify admin dashboard of new signup
+    try { getIO().emit('account:created', { owner_email: account.owner_email, owner_name: account.owner_name }); } catch {}
 
     setAuthCookies(res, accessToken, refreshToken);
     res.status(201).json({

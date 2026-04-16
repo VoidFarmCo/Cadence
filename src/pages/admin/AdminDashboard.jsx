@@ -8,6 +8,7 @@ import {
   TrendingUp, Clock, RefreshCw, LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
+import { getSocket } from '@/lib/socket';
 
 function StatCard({ icon: Icon, label, value, sub, color = 'text-primary' }) {
   return (
@@ -61,7 +62,18 @@ export default function AdminDashboard() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+
+    // Live updates — reload on new signup or any account status change
+    const socket = getSocket();
+    socket.on('account:created', load);
+    socket.on('account:updated', load);
+    return () => {
+      socket.off('account:created', load);
+      socket.off('account:updated', load);
+    };
+  }, []);
 
   const filtered = data?.accounts?.filter(a => {
     const matchesSearch =
