@@ -43,6 +43,30 @@ function clearLoginRateLimit(identifier: string): void {
   loginAttempts.delete(identifier);
 }
 
+// ─── Cookie helpers ──────────────────────────────────────────────────────────
+
+const IS_PROD = process.env.NODE_ENV === 'production';
+
+function setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: 'strict',
+    maxAge: 15 * 60 * 1000, // 15 minutes
+  });
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+}
+
+function clearAuthCookies(res: Response): void {
+  res.clearCookie('accessToken');
+  res.clearCookie('refreshToken');
+}
+
 // ─── Register (create account + company + owner) ────────────────────────────
 
 const registerSchema = z.object({
@@ -76,12 +100,11 @@ router.post('/register', validate(registerSchema), async (req: AuthRequest, res:
       details: 'Account registration',
     });
 
+    setAuthCookies(res, accessToken, refreshToken);
     res.status(201).json({
       user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
       account,
       company,
-      accessToken,
-      refreshToken,
     });
   } catch (error) {
     res.status(500).json({ error: 'Registration failed' });
@@ -155,10 +178,9 @@ router.post('/login', validate(loginSchema), async (req: AuthRequest, res: Respo
       performedBy: user.id,
     });
 
+    setAuthCookies(res, accessToken, refreshToken);
     res.json({
       user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
-      accessToken,
-      refreshToken,
     });
   } catch (error) {
     res.status(500).json({ error: 'Login failed' });
@@ -171,9 +193,14 @@ const refreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
 
-router.post('/refresh', validate(refreshSchema), async (req: AuthRequest, res: Response) => {
+router.post('/refresh', async (req: AuthRequest, res: Response) => {
   try {
-    const { refreshToken } = req.body;
+    // Accept refresh token from cookie or request body
+    const refreshToken = (req as any).cookies?.refreshToken || req.body?.refreshToken;
+    if (!refreshToken) {
+      res.status(401).json({ error: 'No refresh token provided' });
+      return;
+    }
     const decoded = verifyRefreshToken(refreshToken);
 
     const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
@@ -186,6 +213,7 @@ router.post('/refresh', validate(refreshSchema), async (req: AuthRequest, res: R
     const accessToken = generateAccessToken(payload);
     const newRefreshToken = generateRefreshToken(payload);
 
+    setAuthCookies(res, accessToken, newRefreshToken);
     res.json({ accessToken, refreshToken: newRefreshToken });
   } catch {
     res.status(401).json({ error: 'Invalid or expired refresh token' });
@@ -278,14 +306,20 @@ router.post('/accept-invite', validate(acceptInviteSchema), async (req: AuthRequ
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
+    setAuthCookies(res, accessToken, refreshToken);
     res.json({
       user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
-      accessToken,
-      refreshToken,
     });
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Failed to accept invite' });
   }
+});
+
+// ─── Logout ─────────────────────────────────────────────────────────────────
+
+router.post('/logout', (req: AuthRequest, res: Response) => {
+  clearAuthCookies(res);
+  res.json({ message: 'Logged out' });
 });
 
 // ─── Forgot Password ────────────────────────────────────────────────────────

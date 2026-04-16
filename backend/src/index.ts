@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
@@ -33,17 +34,23 @@ const server = createServer(app);
 
 // ─── Socket.io Setup ────────────────────────────────────────────────────────
 
+const ALLOWED_ORIGINS = [env.APP_URL, env.APP_URL.replace('https://', 'https://www.')];
+
 const io = new SocketServer(server, {
   cors: {
-    origin: env.APP_URL,
+    origin: ALLOWED_ORIGINS,
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
 
 initSocket(io);
 
 io.use((socket, next) => {
-  const token = socket.handshake.auth.token;
+  // Accept token from cookie or auth handshake
+  const cookieHeader = socket.handshake.headers.cookie || '';
+  const cookieToken = cookieHeader.split(';').find(c => c.trim().startsWith('accessToken='))?.split('=')[1];
+  const token = cookieToken || socket.handshake.auth.token;
   if (!token) return next(new Error('Authentication required'));
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET);
@@ -64,7 +71,7 @@ io.on('connection', (socket) => {
 // ─── Middleware ──────────────────────────────────────────────────────────────
 
 app.use(cors({
-  origin: env.APP_URL,
+  origin: ALLOWED_ORIGINS,
   credentials: true,
 }));
 
@@ -74,6 +81,7 @@ app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 // JSON parser for everything else
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // ─── Health Check ───────────────────────────────────────────────────────────
 

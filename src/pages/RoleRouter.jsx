@@ -13,12 +13,10 @@ export default function RoleRouter() {
   useEffect(() => {
     async function check() {
       try {
-        const token = localStorage.getItem('accessToken');
-        const authed = !!token;
-        setIsAuthenticated(authed);
+        const { data: me } = await api.get('/api/auth/me');
+        setIsAuthenticated(true);
 
-        if (authed) {
-          const { data: me } = await api.get('/api/auth/me');
+        if (me) {
 
           // Check if this user already has a WorkerProfile
           let profiles = [];
@@ -71,7 +69,8 @@ export default function RoleRouter() {
           }
         }
       } catch (e) {
-        console.error('RoleRouter error:', e);
+        // Not authenticated or error — show home/login
+        setIsAuthenticated(false);
       } finally {
         setLoading(false);
       }

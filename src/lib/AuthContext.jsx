@@ -10,12 +10,6 @@ export const AuthProvider = ({ children }) => {
   const [authError, setAuthError] = useState(null);
 
   const checkUserAuth = useCallback(async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      setIsLoadingAuth(false);
-      setIsAuthenticated(false);
-      return;
-    }
     try {
       setIsLoadingAuth(true);
       setAuthError(null);
@@ -42,8 +36,6 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const { data } = await api.post('/api/auth/login', { email, password });
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
     setUser(data.user);
     setIsAuthenticated(true);
     setAuthError(null);
@@ -52,17 +44,14 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (payload) => {
     const { data } = await api.post('/api/auth/register', payload);
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
     setUser(data.user);
     setIsAuthenticated(true);
     setAuthError(null);
     return data;
   };
 
-  const logout = (redirectTo = '/') => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+  const logout = async (redirectTo = '/') => {
+    try { await api.post('/api/auth/logout'); } catch { /* ignore */ }
     setUser(null);
     setIsAuthenticated(false);
     if (redirectTo) {

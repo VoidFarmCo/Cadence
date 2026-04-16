@@ -9,8 +9,6 @@ export default function useCurrentUser() {
 
   useEffect(() => {
     async function load() {
-      const token = localStorage.getItem('accessToken');
-      if (!token) { setLoading(false); return; }
       try {
         const { data: me } = await api.get('/api/auth/me');
         setUser(me);
