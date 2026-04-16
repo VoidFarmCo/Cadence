@@ -129,6 +129,8 @@ app.get('/api/health', (_req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
+    superadmin_configured: !!(process.env.SUPERADMIN_EMAIL || '').trim(),
+    superadmin_email_hint: (process.env.SUPERADMIN_EMAIL || '').trim().replace(/(.{3}).*(@.*)/, '$1***$2'),
   });
 });
 
