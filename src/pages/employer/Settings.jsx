@@ -1,24 +1,36 @@
 import { useState, useEffect } from 'react';
-import { Companies, PayPeriods } from '@/api/entities';
+import { Companies } from '@/api/entities';
+import api from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Building2, Plus, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, addDays, parseISO } from 'date-fns';
 
 export default function Settings() {
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({});
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const companies = await Companies.list({ sort: '-created_date', limit: 1 });
-      if (companies.length > 0) {
-        setCompany(companies[0]);
-        setForm(companies[0]);
+      try {
+        const companies = await Companies.list();
+        if (companies.length > 0) {
+          const c = companies[0];
+          setCompany(c);
+          setForm({
+            ...c,
+            // Normalize date for the date input (strip time if present)
+            pay_period_start_date: c.pay_period_start_date
+              ? c.pay_period_start_date.substring(0, 10)
+              : '',
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load company', err);
       }
       setLoading(false);
     }
@@ -27,11 +39,29 @@ export default function Settings() {
 
   async function handleSave() {
     try {
+      // Build payload with only the fields the backend accepts
+      const payload = {};
+      const fields = ['name', 'phone', 'address', 'city', 'state', 'zip',
+        'pay_period_type', 'workweek_start'];
+      for (const f of fields) {
+        if (form[f] !== undefined && form[f] !== null && form[f] !== '') {
+          payload[f] = form[f];
+        }
+      }
+      if (form.overtime_threshold) {
+        payload.overtime_threshold = parseInt(form.overtime_threshold, 10);
+      }
+      if (form.pay_period_start_date) {
+        // Send as ISO datetime string for backend parsing
+        payload.pay_period_start_date = form.pay_period_start_date;
+      }
+
       if (company) {
-        await Companies.update(company.id, form);
+        const updated = await Companies.update(company.id, payload);
+        setCompany(updated);
         toast.success('Settings saved');
       } else {
-        const created = await Companies.create(form);
+        const created = await Companies.create(payload);
         setCompany(created);
         toast.success('Company created');
       }
@@ -45,24 +75,19 @@ export default function Settings() {
       toast.error('Set a pay period start date first');
       return;
     }
+    // Save settings first so backend has up-to-date config
+    await handleSave();
+
+    setGenerating(true);
     try {
-      const start = parseISO(form.pay_period_start_date);
-      const periods = [];
-      for (let i = 0; i < 6; i++) {
-        const pStart = addDays(start, i * 14);
-        const pEnd = addDays(pStart, 13);
-        periods.push({
-          start_date: format(pStart, 'yyyy-MM-dd'),
-          end_date: format(pEnd, 'yyyy-MM-dd'),
-          status: 'open'
-        });
-      }
-      for (const period of periods) {
-        await PayPeriods.create(period);
-      }
-      toast.success('6 pay periods created');
+      const res = await api.post('/api/pay-periods/generate', { count: 6 });
+      const periods = res.data;
+      toast.success(`${periods.length} pay period(s) created`);
     } catch (err) {
-      toast.error('Failed to generate pay periods');
+      const msg = err.response?.data?.error || 'Failed to generate pay periods';
+      toast.error(msg);
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -119,6 +144,18 @@ export default function Settings() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
+            <Label>Pay Period Type</Label>
+            <Select value={form.pay_period_type || 'biweekly'} onValueChange={v => setForm({ ...form, pay_period_type: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                <SelectItem value="semimonthly">Semi-monthly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
             <Label>Workweek Start</Label>
             <Select value={form.workweek_start || 'sunday'} onValueChange={v => setForm({ ...form, workweek_start: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -132,13 +169,13 @@ export default function Settings() {
             <Label>OT Threshold (hrs/week)</Label>
             <Input type="number" value={form.overtime_threshold || 40} onChange={e => setForm({ ...form, overtime_threshold: parseInt(e.target.value) })} />
           </div>
-          <div className="space-y-2 sm:col-span-2">
+          <div className="space-y-2">
             <Label>Pay Period Start Date</Label>
             <Input type="date" value={form.pay_period_start_date || ''} onChange={e => setForm({ ...form, pay_period_start_date: e.target.value })} />
           </div>
         </div>
-        <Button variant="outline" onClick={generatePayPeriods} className="gap-2">
-          <Plus className="w-4 h-4" />Generate 6 Pay Periods
+        <Button variant="outline" onClick={generatePayPeriods} disabled={generating} className="gap-2">
+          <Plus className="w-4 h-4" />{generating ? 'Generating...' : 'Generate 6 Pay Periods'}
         </Button>
       </div>
 

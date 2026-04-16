@@ -7,6 +7,7 @@ import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
 import { createAuditLog } from '../services/audit.service';
 import { getCompanyId } from '../lib/company';
+import { generatePayPeriodsForCompany } from '../services/payPeriod.service';
 
 const router = Router();
 
@@ -132,6 +133,50 @@ router.put(
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: 'Failed to update pay period' });
+    }
+  }
+);
+
+// Auto-generate pay periods based on company settings
+const generateSchema = z.object({
+  count: z.number().int().min(1).max(26).optional(),
+}).strict();
+
+router.post(
+  '/generate',
+  authenticate,
+  requireMinRole('payroll_admin'),
+  validate(generateSchema),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const companyId = await getCompanyId(req.user!.email);
+      if (!companyId) {
+        res.status(404).json({ error: 'Company not found' });
+        return;
+      }
+
+      const company = await prisma.company.findUnique({ where: { id: companyId } });
+      if (!company) {
+        res.status(404).json({ error: 'Company not found' });
+        return;
+      }
+
+      if (!company.pay_period_start_date) {
+        res.status(400).json({ error: 'Pay period start date not configured. Update it in Settings first.' });
+        return;
+      }
+
+      const count = req.body.count || 6;
+      const periods = await generatePayPeriodsForCompany(
+        companyId,
+        company.pay_period_type,
+        company.pay_period_start_date,
+        count
+      );
+
+      res.status(201).json(periods);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to generate pay periods' });
     }
   }
 );

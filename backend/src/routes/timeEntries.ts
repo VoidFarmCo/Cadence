@@ -6,8 +6,9 @@ import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
 import { getIO } from '../lib/socket';
-import { getCompanyWorkerEmails } from '../lib/company';
+import { getCompanyId, getCompanyWorkerEmails } from '../lib/company';
 import { createAuditLog } from '../services/audit.service';
+import { findPayPeriodForDate } from '../services/payPeriod.service';
 
 const router = Router();
 
@@ -115,6 +116,15 @@ router.post('/', authenticate, validate(createTimeEntrySchema), async (req: Auth
       where: { user_email: workerEmail },
     });
 
+    // Auto-assign pay_period_id if not provided
+    let payPeriodId = req.body.pay_period_id || null;
+    if (!payPeriodId) {
+      const companyId = await getCompanyId(req.user!.email);
+      if (companyId) {
+        payPeriodId = await findPayPeriodForDate(companyId, new Date(req.body.date));
+      }
+    }
+
     const entry = await prisma.timeEntry.create({
       data: {
         ...req.body,
@@ -123,6 +133,7 @@ router.post('/', authenticate, validate(createTimeEntrySchema), async (req: Auth
         date: new Date(req.body.date),
         clock_in: req.body.clock_in ? new Date(req.body.clock_in) : undefined,
         clock_out: req.body.clock_out ? new Date(req.body.clock_out) : undefined,
+        pay_period_id: payPeriodId,
       },
     });
 

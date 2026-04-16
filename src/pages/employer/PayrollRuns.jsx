@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import api from '@/api/apiClient';
-import { PayrollRuns as PayrollRunsAPI, PayPeriods, TimeEntries, AuditLogs } from '@/api/entities';
+import { PayrollRuns as PayrollRunsAPI, PayPeriods, TimeEntries } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DollarSign, Lock, ArrowRight, CheckCircle2, Download, FileText } from 'lucide-react';
+import { DollarSign, Lock, Unlock, ArrowRight, CheckCircle2, Download, FileText } from 'lucide-react';
 import { formatDate, formatHours } from '@/lib/timeUtils';
 import { toast } from 'sonner';
 
@@ -16,26 +16,75 @@ export default function PayrollRuns() {
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [periodEntries, setPeriodEntries] = useState([]);
 
-  useEffect(() => {
-    async function load() {
+  async function loadData() {
+    try {
       const [r, pp] = await Promise.all([
-        PayrollRunsAPI.list({ sort: '-created_date' }),
-        PayPeriods.list({ sort: '-start_date', limit: 10 }),
+        PayrollRunsAPI.list(),
+        PayPeriods.list(),
       ]);
       setRuns(r);
       setPayPeriods(pp);
-      setLoading(false);
+    } catch (err) {
+      console.error('Failed to load payroll data', err);
     }
-    load();
-  }, []);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadData(); }, []);
 
   const steps = ['Confirm Period', 'Review Hours', 'Export', 'Confirmation'];
+
+  async function handleLockPeriod(period) {
+    try {
+      // Lock the period and let the backend aggregate hours
+      const updated = await PayPeriods.update(period.id, { status: 'locked' });
+      setPayPeriods(prev => prev.map(p => p.id === updated.id ? updated : p));
+      toast.success('Pay period locked');
+    } catch (err) {
+      toast.error('Failed to lock pay period');
+    }
+  }
+
+  async function handleUnlockPeriod(period) {
+    try {
+      const updated = await PayPeriods.update(period.id, { status: 'open', unlock_reason: 'Unlocked for corrections' });
+      setPayPeriods(prev => prev.map(p => p.id === updated.id ? updated : p));
+      toast.success('Pay period unlocked');
+    } catch (err) {
+      toast.error('Failed to unlock pay period');
+    }
+  }
 
   async function startPayrollRun(period) {
     setSelectedPeriod(period);
     setCurrentStep(0);
+    setPeriodEntries([]);
     setStepperOpen(true);
+  }
+
+  async function handleContinueToReview() {
+    // Fetch approved time entries to show accurate totals
+    try {
+      const entries = await TimeEntries.list({ pay_period_id: selectedPeriod.id, status: 'approved' });
+      setPeriodEntries(entries);
+
+      // Calculate totals from entries
+      const workerEmails = new Set(entries.map(e => e.worker_email));
+      const totalRegular = entries.reduce((sum, e) => sum + (e.regular_hours || 0), 0);
+      const totalOvertime = entries.reduce((sum, e) => sum + (e.overtime_hours || 0), 0);
+
+      setSelectedPeriod(prev => ({
+        ...prev,
+        total_regular_hours: totalRegular,
+        total_overtime_hours: totalOvertime,
+        worker_count: workerEmails.size,
+      }));
+    } catch (err) {
+      console.error('Failed to load entries', err);
+    }
+    setCurrentStep(1);
   }
 
   async function handleExportAndFinalize(format) {
@@ -43,53 +92,49 @@ export default function PayrollRuns() {
     setSubmitting(true);
 
     try {
-    // Fetch approved time entries for this period
-    const entries = await TimeEntries.list({ pay_period_id: selectedPeriod.id, status: 'approved' });
+      const entries = periodEntries.length > 0
+        ? periodEntries
+        : await TimeEntries.list({ pay_period_id: selectedPeriod.id, status: 'approved' });
 
-    if (format === 'csv') {
-      const rows = [['Worker Name', 'Worker Email', 'Date', 'Regular Hours', 'Overtime Hours', 'Site']];
-      entries.forEach(e => rows.push([e.worker_name, e.worker_email, e.date, e.regular_hours || 0, e.overtime_hours || 0, e.site_name || '']));
-      const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url;
-      a.download = `payroll_${selectedPeriod.start_date}_to_${selectedPeriod.end_date}.csv`;
-      a.click(); URL.revokeObjectURL(url);
-    } else {
-      // IIF format for payroll import
-      const lines = ['!TIMTRK\tTRKTYPE\tNAME\tDURATION\tDATE\tPROJNAME'];
-      entries.forEach(e => {
-        const hours = (e.regular_hours || 0) + (e.overtime_hours || 0);
-        const dateStr = e.date?.replace(/-/g, '/') || '';
-        lines.push(`TIMTRK\tTIME\t${e.worker_name}\t${hours}\t${dateStr}\t${e.site_name || ''}`);
+      if (format === 'csv') {
+        const rows = [['Worker Name', 'Worker Email', 'Date', 'Regular Hours', 'Overtime Hours', 'Site']];
+        entries.forEach(e => rows.push([e.worker_name, e.worker_email, e.date, e.regular_hours || 0, e.overtime_hours || 0, e.site_name || '']));
+        const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url;
+        a.download = `payroll_${selectedPeriod.start_date?.substring(0, 10)}_to_${selectedPeriod.end_date?.substring(0, 10)}.csv`;
+        a.click(); URL.revokeObjectURL(url);
+      } else {
+        const lines = ['!TIMTRK\tTRKTYPE\tNAME\tDURATION\tDATE\tPROJNAME'];
+        entries.forEach(e => {
+          const hours = (e.regular_hours || 0) + (e.overtime_hours || 0);
+          const dateStr = e.date?.substring(0, 10).replace(/-/g, '/') || '';
+          lines.push(`TIMTRK\tTIME\t${e.worker_name}\t${hours}\t${dateStr}\t${e.site_name || ''}`);
+        });
+        const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url;
+        a.download = `payroll_${selectedPeriod.start_date?.substring(0, 10)}_to_${selectedPeriod.end_date?.substring(0, 10)}.iif`;
+        a.click(); URL.revokeObjectURL(url);
+      }
+
+      // Record the payroll run
+      const newRun = await PayrollRunsAPI.create({
+        pay_period_id: selectedPeriod.id,
+        pay_period_label: `${formatDate(selectedPeriod.start_date)} – ${formatDate(selectedPeriod.end_date)}`,
+        status: 'completed',
+        total_regular_hours: selectedPeriod.total_regular_hours || 0,
+        total_overtime_hours: selectedPeriod.total_overtime_hours || 0,
+        submitted_at: new Date().toISOString(),
+        submitted_by: 'current_user',
       });
-      const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url;
-      a.download = `payroll_${selectedPeriod.start_date}_to_${selectedPeriod.end_date}.iif`;
-      a.click(); URL.revokeObjectURL(url);
-    }
 
-    // Record the run
-    const me = await api.get('/api/auth/me').then(r => r.data);
-    const newRun = await PayrollRunsAPI.create({
-      pay_period_id: selectedPeriod.id,
-      pay_period_label: `${formatDate(selectedPeriod.start_date)} – ${formatDate(selectedPeriod.end_date)}`,
-      status: 'completed',
-      total_regular_hours: selectedPeriod.total_regular_hours || 0,
-      total_overtime_hours: selectedPeriod.total_overtime_hours || 0,
-      submitted_at: new Date().toISOString(),
-      submitted_by: me.email,
-    });
-    await AuditLogs.create({
-      action: 'payroll_submit', entity_type: 'PayrollRun', entity_id: newRun.id, performed_by: me.email,
-      details: `Payroll exported as ${format.toUpperCase()} for ${formatDate(selectedPeriod.start_date)} – ${formatDate(selectedPeriod.end_date)}`
-    });
-    setRuns(prev => [newRun, ...prev]);
-    setCurrentStep(3);
-    toast.success(`Payroll exported as ${format.toUpperCase()}`);
+      setRuns(prev => [newRun, ...prev]);
+      setCurrentStep(3);
+      toast.success(`Payroll exported as ${format.toUpperCase()}`);
     } catch (err) {
-      toast.error('Failed to export payroll: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to export payroll: ' + (err.response?.data?.error || err.message || 'Unknown error'));
     } finally {
       setSubmitting(false);
     }
@@ -101,6 +146,12 @@ export default function PayrollRuns() {
     submitted: 'bg-warning/10 text-warning',
     completed: 'bg-success/10 text-success',
     failed: 'bg-destructive/10 text-destructive',
+  };
+
+  const periodStatusColors = {
+    open: 'bg-warning/10 text-warning',
+    locked: 'bg-success/10 text-success',
+    paid: 'bg-primary/10 text-primary',
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" /></div>;
@@ -121,7 +172,7 @@ export default function PayrollRuns() {
           {payPeriods.map(pp => (
             <div key={pp.id} className="bg-card rounded-xl border border-border p-5">
               <div className="flex items-start justify-between mb-3">
-                <Badge variant="secondary" className={pp.status === 'locked' ? 'bg-success/10 text-success' : pp.status === 'paid' ? 'bg-primary/10 text-primary' : 'bg-warning/10 text-warning'}>
+                <Badge variant="secondary" className={periodStatusColors[pp.status] || ''}>
                   {pp.status === 'locked' && <Lock className="w-3 h-3 mr-1" />}
                   {pp.status}
                 </Badge>
@@ -132,11 +183,23 @@ export default function PayrollRuns() {
                 <span>{formatHours(pp.total_overtime_hours)} OT</span>
                 <span>{pp.worker_count || 0} workers</span>
               </div>
-              {pp.status === 'locked' && (
-                <Button size="sm" className="mt-4 w-full gap-2" onClick={() => startPayrollRun(pp)}>
-                  <DollarSign className="w-4 h-4" />Run Payroll
-                </Button>
-              )}
+              <div className="mt-4 flex gap-2">
+                {pp.status === 'open' && (
+                  <Button size="sm" variant="outline" className="gap-2" onClick={() => handleLockPeriod(pp)}>
+                    <Lock className="w-3 h-3" />Lock Period
+                  </Button>
+                )}
+                {pp.status === 'locked' && (
+                  <>
+                    <Button size="sm" className="gap-2 flex-1" onClick={() => startPayrollRun(pp)}>
+                      <DollarSign className="w-4 h-4" />Run Payroll
+                    </Button>
+                    <Button size="sm" variant="ghost" className="gap-1" onClick={() => handleUnlockPeriod(pp)}>
+                      <Unlock className="w-3 h-3" />
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -202,7 +265,7 @@ export default function PayrollRuns() {
                   <p className="text-sm">Period: <strong>{formatDate(selectedPeriod?.start_date)} – {formatDate(selectedPeriod?.end_date)}</strong></p>
                   <p className="text-sm mt-1">Status: <Badge variant="secondary" className="bg-success/10 text-success ml-1">{selectedPeriod?.status}</Badge></p>
                 </div>
-                <Button onClick={() => setCurrentStep(1)} className="w-full gap-2">Continue <ArrowRight className="w-4 h-4" /></Button>
+                <Button onClick={handleContinueToReview} className="w-full gap-2">Continue <ArrowRight className="w-4 h-4" /></Button>
               </div>
             )}
 
@@ -248,7 +311,7 @@ export default function PayrollRuns() {
                 <CheckCircle2 className="w-12 h-12 text-success mx-auto" />
                 <p className="text-sm font-semibold">Export Complete</p>
                 <p className="text-xs text-muted-foreground">Your payroll file has been downloaded. Import it into your payroll software to process payments.</p>
-                <Button className="w-full" onClick={() => setStepperOpen(false)}>Done</Button>
+                <Button className="w-full" onClick={() => { setStepperOpen(false); loadData(); }}>Done</Button>
               </div>
             )}
           </div>
