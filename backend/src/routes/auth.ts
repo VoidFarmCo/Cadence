@@ -151,6 +151,14 @@ router.post('/login', validate(loginSchema), async (req: AuthRequest, res: Respo
       return;
     }
 
+    // Auto-promote superadmin on login if env var matches
+    const superadminEmails = (process.env.SUPERADMIN_EMAIL || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+    if (superadminEmails.includes(user.email.toLowerCase()) && user.platform_role !== 'superadmin') {
+      await prisma.user.update({ where: { id: user.id }, data: { platform_role: 'superadmin' } });
+      user.platform_role = 'superadmin' as any;
+      console.log(`Auto-promoted ${user.email} to superadmin on login`);
+    }
+
     if (user.status !== 'active') {
       res.status(403).json({ error: 'Account is not active' });
       return;
