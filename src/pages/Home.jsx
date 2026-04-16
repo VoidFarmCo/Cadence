@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CheckCircle2, Clock, FileText, DollarSign, Users, MapPin, ArrowRight, Star } from 'lucide-react';
@@ -10,11 +9,12 @@ export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
 
   useEffect(() => {
-    base44.auth.isAuthenticated().then(setIsAuthenticated);
+    const token = localStorage.getItem('accessToken');
+    setIsAuthenticated(!!token);
   }, []);
 
   const handleSignIn = () => {
-    base44.auth.redirectToLogin();
+    window.location.href = '/login';
   };
 
   if (isAuthenticated === null) return null;

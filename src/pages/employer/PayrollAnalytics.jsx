@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { PayrollRuns, WorkerProfiles, TimeEntries } from '@/api/entities';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DollarSign, Clock, Users, TrendingUp, AlertCircle } from 'lucide-react';
@@ -39,9 +39,9 @@ export default function PayrollAnalytics() {
   useEffect(() => {
     async function load() {
       const [r, w, t] = await Promise.all([
-        base44.entities.PayrollRun.list('-created_date', 50),
-        base44.entities.WorkerProfile.filter({ status: 'active' }),
-        base44.entities.TimeEntry.filter({ status: 'approved' }, '-date', 200),
+        PayrollRuns.list({ sort: '-created_date', limit: 50 }),
+        WorkerProfiles.list({ status: 'active' }),
+        TimeEntries.list({ status: 'approved', sort: '-date', limit: 200 }),
       ]);
       setRuns(r);
       setWorkers(w);

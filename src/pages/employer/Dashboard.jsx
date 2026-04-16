@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { WorkerProfiles, Punches, LeaveRequests, PayPeriods } from '@/api/entities';
+import { getSocket } from '@/lib/socket';
 import { Users, Clock, CalendarOff, DollarSign, AlertTriangle, CheckCircle2, Timer } from 'lucide-react';
 import StatsCard from '@/components/dashboard/StatsCard';
 import { formatHours, formatDate } from '@/lib/timeUtils';
@@ -20,10 +21,10 @@ export default function Dashboard() {
     async function load() {
       try {
         const [w, p, lr, pp] = await Promise.all([
-          base44.entities.WorkerProfile.filter({ status: 'active' }),
-          base44.entities.Punch.list('-created_date', 50),
-          base44.entities.LeaveRequest.filter({ status: 'pending' }),
-          base44.entities.PayPeriod.list('-start_date', 3),
+          WorkerProfiles.list({ status: 'active' }),
+          Punches.list({ sort: '-created_date', limit: 50 }),
+          LeaveRequests.list({ status: 'pending' }),
+          PayPeriods.list({ sort: '-start_date', limit: 3 }),
         ]);
         setWorkers(w);
         setPunches(p);
@@ -37,22 +38,24 @@ export default function Dashboard() {
     }
     load();
   }, []);
-  
-  // Subscribe to real-time Punch updates
+
+  // Subscribe to real-time Punch updates via socket.io
   useEffect(() => {
-    const unsubscribe = base44.entities.Punch.subscribe((event) => {
-      setPunches(prev => {
-        if (event.type === 'create') {
-          return [event.data, ...prev].slice(0, 50);
-        } else if (event.type === 'update') {
-          return prev.map(p => p.id === event.id ? event.data : p);
-        } else if (event.type === 'delete') {
-          return prev.filter(p => p.id !== event.id);
-        }
-        return prev;
-      });
+    const socket = getSocket();
+    socket.on('punch:created', ({ punch }) => {
+      setPunches(prev => [punch, ...prev].slice(0, 50));
     });
-    return unsubscribe;
+    socket.on('punch:updated', ({ punch }) => {
+      setPunches(prev => prev.map(p => p.id === punch.id ? punch : p));
+    });
+    socket.on('punch:deleted', ({ id }) => {
+      setPunches(prev => prev.filter(p => p.id !== id));
+    });
+    return () => {
+      socket.off('punch:created');
+      socket.off('punch:updated');
+      socket.off('punch:deleted');
+    };
   }, []);
 
   const todayStr = new Date().toISOString().split('T')[0];

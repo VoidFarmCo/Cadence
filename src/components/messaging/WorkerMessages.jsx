@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { Messages } from '@/api/entities';
+import { getSocket } from '@/lib/socket';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,37 +28,42 @@ export default function WorkerMessages() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    let unsubscribe;
     async function load() {
-      const me = await base44.auth.me();
+      const me = await api.get('/api/auth/me').then(r => r.data);
       setUser(me);
 
-      const msgs = await base44.entities.Message.filter({
-        recipient_emails: me.email
-      }, '-created_date', 20);
+      const msgs = await Messages.list({
+        recipient_emails: me.email,
+        sort: '-created_date',
+        limit: 20
+      });
       setMessages(msgs);
       setLoading(false);
 
-      // Subscribe to new messages
-      unsubscribe = base44.entities.Message.subscribe((event) => {
-        if (event.type === 'create' && event.data.recipient_emails?.includes(me.email)) {
-          setMessages(prev => [event.data, ...prev]);
+      // Subscribe to new messages via socket.io
+      const socket = getSocket();
+      socket.on('message:new', (data) => {
+        if (data.message?.recipient_emails?.includes(me.email)) {
+          setMessages(prev => [data.message, ...prev]);
         }
       });
     }
 
     load();
-    return () => { if (unsubscribe) unsubscribe(); };
+    return () => {
+      const socket = getSocket();
+      socket.off('message:new');
+    };
   }, []);
 
   async function handleMarkRead(message) {
     if (!message.is_read) {
       const readBy = [...(message.read_by || []), user.email];
-      await base44.entities.Message.update(message.id, {
+      await Messages.update(message.id, {
         is_read: true,
         read_by: readBy
       });
-      setMessages(prev => prev.map(m => 
+      setMessages(prev => prev.map(m =>
         m.id === message.id ? {...m, is_read: true, read_by: readBy} : m
       ));
     }
@@ -86,8 +93,8 @@ export default function WorkerMessages() {
       {messages.map(msg => {
         const Icon = categoryIcons[msg.category] || MessageCircle;
         return (
-          <Card 
-            key={msg.id} 
+          <Card
+            key={msg.id}
             className={`cursor-pointer transition-all hover:shadow-md ${!msg.is_read ? 'border-primary/50 bg-primary/5' : ''}`}
             onClick={() => handleMarkRead(msg)}
           >

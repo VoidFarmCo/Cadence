@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { Accounts } from '@/api/entities';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CreditCard, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
@@ -74,8 +75,8 @@ export default function Billing() {
     }
 
     async function load() {
-      const me = await base44.auth.me();
-      const accounts = await base44.entities.Account.filter({ owner_email: me.email });
+      const me = await api.get('/api/auth/me').then(r => r.data);
+      const accounts = await Accounts.list({ owner_email: me.email });
       setAccount(accounts[0] || null);
       setLoading(false);
     }
@@ -87,11 +88,11 @@ export default function Billing() {
       window.location.href = 'mailto:sales@example.com?subject=Enterprise%20Plan%20Inquiry';
       return;
     }
-    
+
     setCheckoutLoading(plan.id);
     try {
       const priceId = billingInterval === 'monthly' ? plan.monthlyPriceId : plan.annualPriceId;
-      const res = await base44.functions.invoke('createCheckout', { price_id: priceId, plan_id: plan.id });
+      const res = await api.post('/api/stripe/create-checkout', { price_id: priceId, plan_id: plan.id }).then(r => r.data);
       const url = res?.url || res?.data?.url;
       if (!url) throw new Error('No checkout URL returned');
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { Companies, PayPeriods } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,7 @@ export default function Settings() {
 
   useEffect(() => {
     async function load() {
-      const companies = await base44.entities.Company.list('-created_date', 1);
+      const companies = await Companies.list({ sort: '-created_date', limit: 1 });
       if (companies.length > 0) {
         setCompany(companies[0]);
         setForm(companies[0]);
@@ -28,10 +28,10 @@ export default function Settings() {
   async function handleSave() {
     try {
       if (company) {
-        await base44.entities.Company.update(company.id, form);
+        await Companies.update(company.id, form);
         toast.success('Settings saved');
       } else {
-        const created = await base44.entities.Company.create(form);
+        const created = await Companies.create(form);
         setCompany(created);
         toast.success('Company created');
       }
@@ -57,13 +57,8 @@ export default function Settings() {
           status: 'open'
         });
       }
-      // bulkCreate may not exist on all SDK versions, fall back to individual creates
-      if (base44.entities.PayPeriod.bulkCreate) {
-        await base44.entities.PayPeriod.bulkCreate(periods);
-      } else {
-        for (const period of periods) {
-          await base44.entities.PayPeriod.create(period);
-        }
+      for (const period of periods) {
+        await PayPeriods.create(period);
       }
       toast.success('6 pay periods created');
     } catch (err) {

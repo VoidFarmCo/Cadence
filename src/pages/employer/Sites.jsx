@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { Sites as SitesAPI } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,7 @@ export default function Sites() {
   useEffect(() => { loadSites(); }, []);
 
   async function loadSites() {
-    const s = await base44.entities.Site.list('-created_date');
+    const s = await SitesAPI.list({ sort: '-created_date' });
     setSites(s);
     setLoading(false);
   }
@@ -30,7 +30,7 @@ export default function Sites() {
       return;
     }
     try {
-      await base44.entities.Site.create({
+      await SitesAPI.create({
         name: form.name,
         latitude: parseFloat(form.latitude),
         longitude: parseFloat(form.longitude),
@@ -48,7 +48,7 @@ export default function Sites() {
   }
 
   async function handleSaveRadius(siteId, radius) {
-    await base44.entities.Site.update(siteId, { radius_meters: radius });
+    await SitesAPI.update(siteId, { radius_meters: radius });
     toast.success('Geofence radius updated');
     loadSites();
   }

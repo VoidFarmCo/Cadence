@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { PayrollRuns as PayrollRunsAPI, PayPeriods, TimeEntries, AuditLogs } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -19,8 +20,8 @@ export default function PayrollRuns() {
   useEffect(() => {
     async function load() {
       const [r, pp] = await Promise.all([
-        base44.entities.PayrollRun.list('-created_date'),
-        base44.entities.PayPeriod.list('-start_date', 10),
+        PayrollRunsAPI.list({ sort: '-created_date' }),
+        PayPeriods.list({ sort: '-start_date', limit: 10 }),
       ]);
       setRuns(r);
       setPayPeriods(pp);
@@ -43,7 +44,7 @@ export default function PayrollRuns() {
 
     try {
     // Fetch approved time entries for this period
-    const entries = await base44.entities.TimeEntry.filter({ pay_period_id: selectedPeriod.id, status: 'approved' });
+    const entries = await TimeEntries.list({ pay_period_id: selectedPeriod.id, status: 'approved' });
 
     if (format === 'csv') {
       const rows = [['Worker Name', 'Worker Email', 'Date', 'Regular Hours', 'Overtime Hours', 'Site']];
@@ -70,8 +71,8 @@ export default function PayrollRuns() {
     }
 
     // Record the run
-    const me = await base44.auth.me();
-    const newRun = await base44.entities.PayrollRun.create({
+    const me = await api.get('/api/auth/me').then(r => r.data);
+    const newRun = await PayrollRunsAPI.create({
       pay_period_id: selectedPeriod.id,
       pay_period_label: `${formatDate(selectedPeriod.start_date)} – ${formatDate(selectedPeriod.end_date)}`,
       status: 'completed',
@@ -80,7 +81,7 @@ export default function PayrollRuns() {
       submitted_at: new Date().toISOString(),
       submitted_by: me.email,
     });
-    await base44.entities.AuditLog.create({
+    await AuditLogs.create({
       action: 'payroll_submit', entity_type: 'PayrollRun', entity_id: newRun.id, performed_by: me.email,
       details: `Payroll exported as ${format.toUpperCase()} for ${formatDate(selectedPeriod.start_date)} – ${formatDate(selectedPeriod.end_date)}`
     });

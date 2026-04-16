@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { WorkerDocuments as WorkerDocumentsAPI } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +23,16 @@ const DOC_COLORS = {
   'Other': 'bg-muted text-muted-foreground',
 };
 
+async function uploadFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  // TODO: implement file upload endpoint
+  const { data } = await api.post('/api/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data; // { file_url }
+}
+
 export default function WorkerDocuments({ worker, readOnly = false }) {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +47,7 @@ export default function WorkerDocuments({ worker, readOnly = false }) {
 
   async function loadDocs() {
     setLoading(true);
-    const results = await base44.entities.WorkerDocument.filter({ worker_email: worker.user_email }, '-created_date');
+    const results = await WorkerDocumentsAPI.list({ worker_email: worker.user_email, sort: '-created_date' });
     setDocs(results);
     setLoading(false);
   }
@@ -47,9 +58,9 @@ export default function WorkerDocuments({ worker, readOnly = false }) {
       return;
     }
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    const me = await base44.auth.me();
-    await base44.entities.WorkerDocument.create({
+    const { file_url } = await uploadFile(file);
+    const me = await api.get('/api/auth/me').then(r => r.data);
+    await WorkerDocumentsAPI.create({
       worker_email: worker.user_email,
       worker_name: worker.full_name,
       doc_type: form.doc_type,
@@ -70,7 +81,7 @@ export default function WorkerDocuments({ worker, readOnly = false }) {
 
   async function handleDelete(doc) {
     if (!confirm(`Delete "${doc.title}"?`)) return;
-    await base44.entities.WorkerDocument.delete(doc.id);
+    await WorkerDocumentsAPI.delete(doc.id);
     setDocs(prev => prev.filter(d => d.id !== doc.id));
     toast.success('Document deleted');
   }

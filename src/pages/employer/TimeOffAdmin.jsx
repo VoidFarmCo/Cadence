@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { LeaveRequests, AuditLogs } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -16,16 +17,16 @@ export default function TimeOffAdmin() {
   const [denyReason, setDenyReason] = useState('');
 
   useEffect(() => {
-    base44.entities.LeaveRequest.list('-created_date').then(r => { setRequests(r); setLoading(false); });
+    LeaveRequests.list({ sort: '-created_date' }).then(r => { setRequests(r); setLoading(false); });
   }, []);
 
   async function handleApprove(req) {
     try {
-      const me = await base44.auth.me();
-      await base44.entities.LeaveRequest.update(req.id, {
+      const me = await api.get('/api/auth/me').then(r => r.data);
+      await LeaveRequests.update(req.id, {
         status: 'approved', reviewed_by: me.email, reviewed_at: new Date().toISOString()
       });
-      await base44.entities.AuditLog.create({
+      await AuditLogs.create({
         action: 'leave_approve', entity_type: 'LeaveRequest', entity_id: req.id, performed_by: me.email
       });
       setRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'approved' } : r));
@@ -38,11 +39,11 @@ export default function TimeOffAdmin() {
   async function handleDeny() {
     if (!denyReason) { toast.error('Reason required'); return; }
     try {
-      const me = await base44.auth.me();
-      await base44.entities.LeaveRequest.update(denyDialog.id, {
+      const me = await api.get('/api/auth/me').then(r => r.data);
+      await LeaveRequests.update(denyDialog.id, {
         status: 'denied', reviewed_by: me.email, reviewed_at: new Date().toISOString(), denial_reason: denyReason
       });
-      await base44.entities.AuditLog.create({
+      await AuditLogs.create({
         action: 'leave_deny', entity_type: 'LeaveRequest', entity_id: denyDialog.id, performed_by: me.email, reason: denyReason
       });
       setRequests(prev => prev.map(r => r.id === denyDialog.id ? { ...r, status: 'denied' } : r));

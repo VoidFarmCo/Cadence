@@ -2,7 +2,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, MapPin, ClipboardCheck, CalendarOff, DollarSign, BarChart3, Settings, LogOut, FileText, Map, CalendarDays, CreditCard, PieChart, UserCheck } from 'lucide-react';
 
 
-import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -68,7 +67,11 @@ export default function EmployerSidebar({ user }) {
             <p className="text-[10px] text-sidebar-foreground/50 capitalize">{user?.role || 'owner'}</p>
           </div>
           <button
-            onClick={() => base44.auth.logout('/')}
+            onClick={() => {
+              localStorage.removeItem('accessToken');
+              localStorage.removeItem('refreshToken');
+              window.location.href = '/';
+            }}
             className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
           >
             <LogOut className="w-4 h-4" />

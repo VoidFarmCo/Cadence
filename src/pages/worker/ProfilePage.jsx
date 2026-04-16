@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { WorkerProfiles } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -20,9 +21,9 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function load() {
-      const me = await base44.auth.me();
+      const me = await api.get('/api/auth/me').then(r => r.data);
       setUser(me);
-      const profiles = await base44.entities.WorkerProfile.filter({ user_email: me.email });
+      const profiles = await WorkerProfiles.list({ user_email: me.email });
       setProfile(profiles[0]);
       if (profiles[0]) setInfoForm({ full_name: profiles[0].full_name || '', phone: profiles[0].phone || '' });
       setLoading(false);
@@ -32,7 +33,7 @@ export default function ProfilePage() {
 
   async function savePersonalInfo() {
     if (!infoForm.full_name.trim()) { toast.error('Name is required'); return; }
-    await base44.entities.WorkerProfile.update(profile.id, { full_name: infoForm.full_name, phone: infoForm.phone });
+    await WorkerProfiles.update(profile.id, { full_name: infoForm.full_name, phone: infoForm.phone });
     setProfile(prev => ({ ...prev, full_name: infoForm.full_name, phone: infoForm.phone }));
     setEditingInfo(false);
     toast.success('Profile updated');
@@ -40,7 +41,7 @@ export default function ProfilePage() {
 
   async function updatePayPreference(value) {
     if (profile) {
-      await base44.entities.WorkerProfile.update(profile.id, { pay_preference: value });
+      await WorkerProfiles.update(profile.id, { pay_preference: value });
       setProfile(prev => ({ ...prev, pay_preference: value }));
       toast.success('Pay preference updated');
     }
@@ -49,8 +50,10 @@ export default function ProfilePage() {
   async function handleDeleteAccount() {
     if (deleteInput.trim().toLowerCase() !== 'delete') return;
     toast.loading('Deleting account...');
-    if (profile) await base44.entities.WorkerProfile.delete(profile.id);
-    await base44.auth.logout('/');
+    if (profile) await WorkerProfiles.delete(profile.id);
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    window.location.href = '/';
   }
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" /></div>;
@@ -195,7 +198,11 @@ export default function ProfilePage() {
         </Button>
       </div>
 
-      <Button variant="outline" className="w-full gap-2 text-destructive select-none" onClick={() => base44.auth.logout('/')}>
+      <Button variant="outline" className="w-full gap-2 text-destructive select-none" onClick={() => {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/';
+      }}>
         <LogOut className="w-4 h-4" />Sign Out
       </Button>
 

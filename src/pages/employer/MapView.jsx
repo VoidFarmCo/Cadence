@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { Sites, Punches, WorkerProfiles } from '@/api/entities';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -36,9 +36,9 @@ export default function MapView() {
   async function load() {
     const today = new Date().toISOString().split('T')[0];
     const [s, punches, profs] = await Promise.all([
-      base44.entities.Site.filter({ status: 'active' }),
-      base44.entities.Punch.list('-created_date', 200),
-      base44.entities.WorkerProfile.filter({ status: 'active' }),
+      Sites.list({ status: 'active' }),
+      Punches.list({ sort: '-created_date', limit: 200 }),
+      WorkerProfiles.list({ status: 'active' }),
     ]);
     setSites(s);
     setProfiles(profs);

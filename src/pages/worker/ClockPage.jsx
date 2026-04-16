@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { Sites, WorkerProfiles, Punches, TimeEntries } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import GpsChip from '@/components/clock/GpsChip';
@@ -28,12 +29,12 @@ export default function ClockPage() {
 
   useEffect(() => {
     async function init() {
-      const me = await base44.auth.me();
+      const me = await api.get('/api/auth/me').then(r => r.data);
       setUser(me);
       const [s, profiles, punches] = await Promise.all([
-        base44.entities.Site.filter({ status: 'active' }),
-        base44.entities.WorkerProfile.filter({ user_email: me.email }),
-        base44.entities.Punch.filter({ worker_email: me.email }, '-created_date', 1),
+        Sites.list({ status: 'active' }),
+        WorkerProfiles.list({ user_email: me.email }),
+        Punches.list({ worker_email: me.email, sort: '-created_date', limit: 1 }),
       ]);
       setSites(s);
       const p = profiles[0];
@@ -105,13 +106,13 @@ export default function ClockPage() {
     setLastPunch({ ...punchData, id: `temp-${now}` });
     setSubmitting(true);
     try {
-    const created = await base44.entities.Punch.create(punchData);
+    const created = await Punches.create(punchData);
     setLastPunch(created);
 
     // On clock-in: create or update a TimeEntry for today
     if (punchType === 'clock_in') {
       const today = new Date().toISOString().split('T')[0];
-      const existing = await base44.entities.TimeEntry.filter({ worker_email: user.email, date: today });
+      const existing = await TimeEntries.list({ worker_email: user.email, date: today });
       const entryData = {
         clock_in: now,
         site_id: selectedSite || undefined,
@@ -120,9 +121,9 @@ export default function ClockPage() {
         ...(position?.longitude && { clock_in_longitude: position.longitude }),
       };
       if (existing.length > 0) {
-        await base44.entities.TimeEntry.update(existing[0].id, entryData);
+        await TimeEntries.update(existing[0].id, entryData);
       } else {
-        await base44.entities.TimeEntry.create({
+        await TimeEntries.create({
           worker_email: user.email,
           worker_name: user.full_name || profile?.full_name || user.email,
           date: today,
@@ -135,11 +136,11 @@ export default function ClockPage() {
     // On break_start: record break start time in exception_notes for later calculation
     if (punchType === 'break_start') {
       const today = new Date().toISOString().split('T')[0];
-      const existing = await base44.entities.TimeEntry.filter({ worker_email: user.email, date: today });
+      const existing = await TimeEntries.list({ worker_email: user.email, date: today });
       if (existing.length > 0) {
         const entry = existing[0];
         // Store break start time so break_end can calculate duration
-        await base44.entities.TimeEntry.update(entry.id, {
+        await TimeEntries.update(entry.id, {
           exception_notes: JSON.stringify({ ...JSON.parse(entry.exception_notes || '{}'), break_start: now }),
         });
       }
@@ -148,7 +149,7 @@ export default function ClockPage() {
     // On break_end: calculate break duration and accumulate break_minutes
     if (punchType === 'break_end') {
       const today = new Date().toISOString().split('T')[0];
-      const existing = await base44.entities.TimeEntry.filter({ worker_email: user.email, date: today });
+      const existing = await TimeEntries.list({ worker_email: user.email, date: today });
       if (existing.length > 0) {
         const entry = existing[0];
         let extraBreakMinutes = 0;
@@ -157,7 +158,7 @@ export default function ClockPage() {
           if (meta.break_start) {
             extraBreakMinutes = Math.round((new Date(now) - new Date(meta.break_start)) / 60000);
             delete meta.break_start;
-            await base44.entities.TimeEntry.update(entry.id, {
+            await TimeEntries.update(entry.id, {
               break_minutes: (entry.break_minutes || 0) + extraBreakMinutes,
               exception_notes: JSON.stringify(meta),
             });
@@ -169,7 +170,7 @@ export default function ClockPage() {
     // On clock-out: update TimeEntry with clock_out and total_hours
     if (punchType === 'clock_out') {
       const today = new Date().toISOString().split('T')[0];
-      const existing = await base44.entities.TimeEntry.filter({ worker_email: user.email, date: today });
+      const existing = await TimeEntries.list({ worker_email: user.email, date: today });
       if (existing.length > 0) {
         const entry = existing[0];
         let totalHours = 0;
@@ -183,7 +184,7 @@ export default function ClockPage() {
         const weekStart = new Date(now);
         weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday
         weekStart.setHours(0, 0, 0, 0);
-        const weekEntries = await base44.entities.TimeEntry.filter({ worker_email: user.email });
+        const weekEntries = await TimeEntries.list({ worker_email: user.email });
         const hoursThisWeekSoFar = weekEntries
           .filter(e => e.id !== entry.id && e.date >= weekStart.toISOString().split('T')[0])
           .reduce((s, e) => s + (e.total_hours || 0), 0);
@@ -191,7 +192,7 @@ export default function ClockPage() {
         const remainingRegular = Math.max(0, weeklyOTThreshold - hoursThisWeekSoFar);
         const regularHours = Math.min(totalHours, remainingRegular);
         const overtimeHours = Math.max(0, totalHours - regularHours);
-        await base44.entities.TimeEntry.update(entry.id, {
+        await TimeEntries.update(entry.id, {
           clock_out: now,
           total_hours: parseFloat(totalHours.toFixed(2)),
           regular_hours: parseFloat(regularHours.toFixed(2)),

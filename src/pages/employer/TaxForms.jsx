@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { TaxForms as TaxFormsAPI, WorkerProfiles } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -96,17 +97,17 @@ export default function TaxForms() {
 
   useEffect(() => {
     Promise.all([
-      base44.entities.TaxForm.list('-created_date', 100),
-      base44.entities.WorkerProfile.filter({ status: 'active' }),
+      TaxFormsAPI.list({ sort: '-created_date', limit: 100 }),
+      WorkerProfiles.list({ status: 'active' }),
     ]).then(([f, w]) => { setForms(f); setWorkers(w); setLoading(false); });
   }, []);
 
   const handleSend = async () => {
     setSending(true);
-    const me = await base44.auth.me();
+    const me = await api.get('/api/auth/me').then(r => r.data);
     const worker = workers.find(w => w.user_email === draft.worker_email);
     const template = FORM_TEMPLATES[draft.form_type] || FORM_TEMPLATES['Custom'];
-    await base44.entities.TaxForm.create({
+    await TaxFormsAPI.create({
       title: draft.form_type,
       form_type: draft.form_type,
       description: draft.description || template.description,
@@ -118,7 +119,7 @@ export default function TaxForms() {
       due_date: draft.due_date || null,
       fields_config: JSON.stringify(template.fields),
     });
-    const updated = await base44.entities.TaxForm.list('-created_date', 100);
+    const updated = await TaxFormsAPI.list({ sort: '-created_date', limit: 100 });
     setForms(updated);
     setShowSend(false);
     setDraft({ form_type: '', worker_email: '', due_date: '', description: '' });
