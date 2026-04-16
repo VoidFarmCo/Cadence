@@ -1,7 +1,7 @@
 import api from './apiClient';
 
 export const createEntityAPI = (basePath) => ({
-  list: (params) => api.get(basePath, { params }).then((r) => r.data),
+  list: (params) => api.get(basePath, { params }).then((r) => { const d = r.data; return Array.isArray(d) ? d : (d.data || []); }),
   get: (id) => api.get(`${basePath}/${id}`).then((r) => r.data),
   create: (data) => api.post(basePath, data).then((r) => r.data),
   update: (id, data) => api.put(`${basePath}/${id}`, data).then((r) => r.data),
