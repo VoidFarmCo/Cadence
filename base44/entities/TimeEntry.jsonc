@@ -101,7 +101,12 @@
         },
         {
           "user_condition": {
-            "role": "admin"
+            "role": "owner"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "payroll_admin"
           }
         }
       ]
@@ -113,7 +118,17 @@
         },
         {
           "user_condition": {
-            "role": "admin"
+            "role": "owner"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "payroll_admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
           }
         }
       ]
@@ -125,14 +140,24 @@
         },
         {
           "user_condition": {
-            "role": "admin"
+            "role": "owner"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "payroll_admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
           }
         }
       ]
     },
     "delete": {
       "user_condition": {
-        "role": "admin"
+        "role": "owner"
       }
     }
   }
