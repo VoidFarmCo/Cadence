@@ -8,6 +8,8 @@ export default function useCurrentUser() {
 
   useEffect(() => {
     async function load() {
+      const authed = await base44.auth.isAuthenticated();
+      if (!authed) { setLoading(false); return; }
       const me = await base44.auth.me();
       setUser(me);
       const profiles = await base44.entities.WorkerProfile.filter({ user_email: me.email });
