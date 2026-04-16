@@ -64,13 +64,23 @@ export default function RoleRouter() {
             setRole('owner');
           } else {
             // Existing user — use their WorkerProfile role as the source of truth
-            const profileRole = profiles[0].role || 'worker';
+            const profile = profiles[0];
+            const profileRole = profile.role || 'worker';
 
             // Sync platform role: employer roles get 'admin', workers get 'user'
             const isEmployerRole = ['owner', 'manager', 'payroll_admin'].includes(profileRole);
             const expectedPlatformRole = isEmployerRole ? 'admin' : 'user';
             if (me.role !== expectedPlatformRole) {
               await base44.auth.updateMe({ role: expectedPlatformRole });
+            }
+
+            // Activate pending profiles on first login (invited users)
+            if (profile.status === 'pending') {
+              try {
+                await base44.entities.WorkerProfile.update(profile.id, { status: 'active' });
+              } catch (e) {
+                console.error('Failed to activate pending profile:', e);
+              }
             }
 
             setRole(profileRole);

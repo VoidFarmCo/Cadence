@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -50,6 +50,7 @@ export default function WorkerDetailModal({ worker, open, onClose, onDeleted }) 
               </div>
             </div>
           </DialogTitle>
+          <DialogDescription className="sr-only">View and manage worker profile details</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 mt-2">

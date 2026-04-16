@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, CalendarOff } from 'lucide-react';
 import { formatDate } from '@/lib/timeUtils';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
@@ -75,7 +75,7 @@ export default function TimeOffPage() {
             <Button size="sm" className="gap-2"><Plus className="w-4 h-4" />Request</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Request Time Off</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Request Time Off</DialogTitle><DialogDescription className="sr-only">Submit a new time off request</DialogDescription></DialogHeader>
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label>Type</Label>

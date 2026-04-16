@@ -48,11 +48,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Employer-side roles need platform 'admin' so they can access employer features. Workers get 'user'.
-    const platformRole = ['owner', 'manager', 'payroll_admin'].includes(inviteeRole) ? 'admin' : 'user';
-
+    // Send the invite WITHOUT specifying a role to avoid the Base44 403 error
+    // ("Only admins can invite users with non-default roles").
+    // The intended app role is already stored in the WorkerProfile above.
+    // RoleRouter will sync the platform role (admin/user) when the invitee first logs in.
     try {
-      await base44.asServiceRole.users.inviteUser(email, platformRole);
+      await base44.asServiceRole.users.inviteUser(email);
     } catch (inviteErr) {
       // If user already exists in the platform, that's fine — profile is already created/updated
       console.warn(`Invite skipped for ${email}: ${inviteErr.message}`);
