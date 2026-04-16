@@ -49,7 +49,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 
 // Cross-domain deployments (frontend on Vercel, backend on Railway) require
 // SameSite=None; Secure so the browser actually sends cookies cross-site.
-const COOKIE_SAME_SITE = IS_PROD ? 'none' : 'lax';
+const COOKIE_SAME_SITE: 'none' | 'lax' = IS_PROD ? 'none' : 'lax';
 
 function setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
   res.cookie('accessToken', accessToken, {
