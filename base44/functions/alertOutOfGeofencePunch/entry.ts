@@ -4,7 +4,6 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
-    // This function is triggered only by automation, verify request authenticity
     const payload = await req.json();
     if (!payload.event?.entity_id || payload.event.type !== 'create') {
       return Response.json({ error: 'Forbidden: Invalid automation payload' }, { status: 403 });
