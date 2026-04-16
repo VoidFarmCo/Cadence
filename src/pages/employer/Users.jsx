@@ -14,8 +14,12 @@ export default function Users() {
   const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      const allUsers = await base44.entities.User.list();
-      return allUsers.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+      try {
+        const allUsers = await base44.entities.User.list();
+        return allUsers.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+      } catch {
+        return [];
+      }
     },
   });
 

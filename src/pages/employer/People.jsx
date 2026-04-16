@@ -44,7 +44,7 @@ export default function People() {
       pay_rate: form.pay_rate ? parseFloat(form.pay_rate) : undefined,
       status: 'pending'
     });
-    await base44.users.inviteUser(form.user_email, form.role === 'owner' || form.role === 'payroll_admin' || form.role === 'manager' ? 'admin' : 'user');
+    await base44.functions.invoke('inviteWorker', { email: form.user_email, appRole: form.role });
     toast.success(`Invited ${form.full_name}`);
     setDialogOpen(false);
     setForm({ full_name: '', user_email: '', phone: '', worker_type: 'employee', role: 'worker', pay_rate: '' });
