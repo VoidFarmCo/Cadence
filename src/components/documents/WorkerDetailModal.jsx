@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Shield, Trash2 } from 'lucide-react';
 import WorkerDocuments from './WorkerDocuments';
-import { base44 } from '@/api/base44Client';
+import { WorkerProfiles } from '@/api/entities';
 import { toast } from 'sonner';
 
 const statusColors = { active: 'bg-success/10 text-success', inactive: 'bg-muted text-muted-foreground', pending: 'bg-warning/10 text-warning' };
@@ -17,7 +17,7 @@ export default function WorkerDetailModal({ worker, open, onClose, onDeleted }) 
   async function handleDelete() {
     setDeleting(true);
     try {
-      await base44.entities.WorkerProfile.delete(worker.id);
+      await WorkerProfiles.delete(worker.id);
       toast.success(`${worker.full_name} has been removed`);
     } catch (err) {
       // If record not found, treat as already deleted

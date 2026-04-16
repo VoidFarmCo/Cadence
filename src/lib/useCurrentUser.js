@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { WorkerProfiles } from '@/api/entities';
 
 export default function useCurrentUser() {
   const [user, setUser] = useState(null);
@@ -8,12 +9,16 @@ export default function useCurrentUser() {
 
   useEffect(() => {
     async function load() {
-      const authed = await base44.auth.isAuthenticated();
-      if (!authed) { setLoading(false); return; }
-      const me = await base44.auth.me();
-      setUser(me);
-      const profiles = await base44.entities.WorkerProfile.filter({ user_email: me.email });
-      setProfile(profiles[0] || null);
+      const token = localStorage.getItem('accessToken');
+      if (!token) { setLoading(false); return; }
+      try {
+        const { data: me } = await api.get('/api/auth/me');
+        setUser(me);
+        const profiles = await WorkerProfiles.list({ user_email: me.email });
+        setProfile(profiles[0] || null);
+      } catch {
+        // not authenticated
+      }
       setLoading(false);
     }
     load();

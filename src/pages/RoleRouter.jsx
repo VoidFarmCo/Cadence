@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { WorkerProfiles, Accounts } from '@/api/entities';
 import Home from './Home';
 
 export default function RoleRouter() {
@@ -12,30 +13,31 @@ export default function RoleRouter() {
   useEffect(() => {
     async function check() {
       try {
-        const authed = await base44.auth.isAuthenticated();
+        const token = localStorage.getItem('accessToken');
+        const authed = !!token;
         setIsAuthenticated(authed);
 
         if (authed) {
-          const me = await base44.auth.me();
+          const { data: me } = await api.get('/api/auth/me');
 
           // Check if this user already has a WorkerProfile
           let profiles = [];
           try {
-            profiles = await base44.entities.WorkerProfile.filter({ user_email: me.email });
+            profiles = await WorkerProfiles.list({ user_email: me.email });
           } catch (e) {
             console.error('Failed to fetch profiles:', e);
           }
 
           if (profiles.length === 0) {
             // Brand new user with no profile — make them owner and onboard
-            await base44.auth.updateMe({ role: 'admin' });
+            await api.put('/api/auth/me', { role: 'admin' });
             setOnboardingStatus('Setting up your account...');
 
             const now = new Date();
             const trialEnd = new Date(now);
             trialEnd.setDate(trialEnd.getDate() + 30);
 
-            await base44.entities.WorkerProfile.create({
+            await WorkerProfiles.create({
               user_email: me.email,
               full_name: me.full_name,
               worker_type: 'employee',
@@ -43,22 +45,12 @@ export default function RoleRouter() {
               status: 'active',
             });
 
-            await base44.entities.Account.create({
+            await Accounts.create({
               owner_email: me.email,
               owner_name: me.full_name,
               status: 'trial',
               trial_start: now.toISOString(),
               trial_end: trialEnd.toISOString(),
-            });
-
-            base44.analytics.track({
-              eventName: 'new_company_account_created',
-              properties: {
-                owner_email: me.email,
-                owner_name: me.full_name,
-                trial_start: now.toISOString(),
-                trial_end: trialEnd.toISOString(),
-              }
             });
 
             setRole('owner');
@@ -71,13 +63,13 @@ export default function RoleRouter() {
             const isEmployerRole = ['owner', 'manager', 'payroll_admin'].includes(profileRole);
             const expectedPlatformRole = isEmployerRole ? 'admin' : 'user';
             if (me.role !== expectedPlatformRole) {
-              await base44.auth.updateMe({ role: expectedPlatformRole });
+              await api.put('/api/auth/me', { role: expectedPlatformRole });
             }
 
             // Activate pending profiles on first login (invited users)
             if (profile.status === 'pending') {
               try {
-                await base44.entities.WorkerProfile.update(profile.id, { status: 'active' });
+                await WorkerProfiles.update(profile.id, { status: 'active' });
               } catch (e) {
                 console.error('Failed to activate pending profile:', e);
               }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { WorkerProfiles, Sites, Shifts } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -21,14 +21,14 @@ export default function SchedulePage() {
 
   useEffect(() => {
     Promise.all([
-      base44.entities.WorkerProfile.filter({ status: 'active' }),
-      base44.entities.Site.filter({ status: 'active' }),
+      WorkerProfiles.list({ status: 'active' }),
+      Sites.list({ status: 'active' }),
     ]).then(([w, s]) => { setWorkers(w); setSites(s); setLoading(false); });
     loadShifts();
   }, []);
 
   async function loadShifts() {
-    const all = await base44.entities.Shift.list('date', 200);
+    const all = await Shifts.list({ sort: 'date', limit: 200 });
     setShifts(all);
   }
 
@@ -38,7 +38,7 @@ export default function SchedulePage() {
     try {
       const worker = workers.find(w => w.user_email === draft.worker_email);
       const site = sites.find(s => s.id === draft.site_id);
-      await base44.entities.Shift.create({
+      await Shifts.create({
         ...draft,
         worker_name: worker?.full_name || draft.worker_email,
         site_name: site?.name || '',
@@ -55,7 +55,7 @@ export default function SchedulePage() {
 
   async function deleteShift(id) {
     try {
-      await base44.entities.Shift.delete(id);
+      await Shifts.delete(id);
       setShifts(s => s.filter(x => x.id !== id));
     } catch (err) {
       toast.error('Failed to delete shift');

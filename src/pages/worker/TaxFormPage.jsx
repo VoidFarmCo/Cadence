@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { TaxForms } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +9,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { FileText, CheckCircle2, Clock, ChevronRight, Upload, X } from 'lucide-react';
 import { format } from 'date-fns';
+
+async function uploadFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await api.post('/api/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}
 
 export default function TaxFormPage() {
   const [forms, setForms] = useState([]);
@@ -23,9 +33,9 @@ export default function TaxFormPage() {
 
   useEffect(() => {
     const init = async () => {
-      const me = await base44.auth.me();
+      const me = await api.get('/api/auth/me').then(r => r.data);
       setUserEmail(me.email);
-      const myForms = await base44.entities.TaxForm.filter({ worker_email: me.email });
+      const myForms = await TaxForms.list({ worker_email: me.email });
       setForms(myForms);
       setLoading(false);
     };
@@ -45,19 +55,19 @@ export default function TaxFormPage() {
     if (!file) return;
     setUploadedFile(file);
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await uploadFile(file);
     setUploadedFileUrl(file_url);
     setUploading(false);
   };
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    await base44.entities.TaxForm.update(active.id, {
+    await TaxForms.update(active.id, {
       status: 'completed',
       completed_at: new Date().toISOString(),
       response_data: JSON.stringify({ ...responses, _uploaded_file_url: uploadedFileUrl || undefined }),
     });
-    const updated = await base44.entities.TaxForm.filter({ worker_email: userEmail });
+    const updated = await TaxForms.list({ worker_email: userEmail });
     setForms(updated);
     setSubmitted(true);
     setSubmitting(false);

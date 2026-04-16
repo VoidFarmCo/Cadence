@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { Expenses, WorkerProfiles } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,15 @@ const CATEGORIES = [
   { value: 'other', label: 'Other' },
 ];
 
+async function uploadFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await api.post('/api/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}
+
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,9 +41,9 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     async function load() {
-      const me = await base44.auth.me();
+      const me = await api.get('/api/auth/me').then(r => r.data);
       setUser(me);
-      const exps = await base44.entities.Expense.filter({ worker_email: me.email }, '-date');
+      const exps = await Expenses.list({ worker_email: me.email, sort: '-date' });
       setExpenses(exps);
       setLoading(false);
     }
@@ -64,11 +74,11 @@ export default function ExpensesPage() {
     try {
       let receiptUrl;
       if (receiptFile) {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file: receiptFile });
+        const { file_url } = await uploadFile(receiptFile);
         receiptUrl = file_url;
       }
-      const profiles = await base44.entities.WorkerProfile.filter({ user_email: user.email });
-      const created = await base44.entities.Expense.create({
+      const profiles = await WorkerProfiles.list({ user_email: user.email });
+      const created = await Expenses.create({
         worker_email: user.email,
         worker_name: user.full_name || profiles[0]?.full_name,
         category: form.category,

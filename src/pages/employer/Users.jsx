@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { Users as UsersAPI } from '@/api/entities';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,7 @@ export default function Users() {
     queryKey: ['users'],
     queryFn: async () => {
       try {
-        const allUsers = await base44.entities.User.list();
+        const allUsers = await UsersAPI.list();
         return allUsers.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
       } catch {
         return [];

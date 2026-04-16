@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { TimeEntries, WorkerProfiles } from '@/api/entities';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import StatsCard from '@/components/dashboard/StatsCard';
@@ -16,8 +16,8 @@ export default function Reports() {
   useEffect(() => {
     async function load() {
       const [e, w] = await Promise.all([
-        base44.entities.TimeEntry.list('-date', 200),
-        base44.entities.WorkerProfile.filter({ status: 'active' }),
+        TimeEntries.list({ sort: '-date', limit: 200 }),
+        WorkerProfiles.list({ status: 'active' }),
       ]);
       setEntries(e);
       setWorkers(w);

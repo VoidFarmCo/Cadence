@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { TimeEntries } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Send, MapPin } from 'lucide-react';
@@ -15,9 +16,9 @@ export default function TimesheetPage() {
 
   useEffect(() => {
     async function load() {
-      const me = await base44.auth.me();
+      const me = await api.get('/api/auth/me').then(r => r.data);
       setUser(me);
-      const allEntries = await base44.entities.TimeEntry.filter({ worker_email: me.email }, '-date', 50);
+      const allEntries = await TimeEntries.list({ worker_email: me.email, sort: '-date', limit: 50 });
       setEntries(allEntries);
       setLoading(false);
     }
@@ -42,7 +43,7 @@ export default function TimesheetPage() {
   async function handleSubmit() {
     try {
       for (const entry of pendingEntries) {
-        await base44.entities.TimeEntry.update(entry.id, { status: 'submitted' });
+        await TimeEntries.update(entry.id, { status: 'submitted' });
       }
       setEntries(prev => prev.map(e =>
         pendingEntries.find(p => p.id === e.id) ? { ...e, status: 'submitted' } : e

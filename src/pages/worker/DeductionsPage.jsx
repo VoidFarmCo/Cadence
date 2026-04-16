@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { TaxDeductions, WorkerProfiles } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -34,9 +35,9 @@ export default function DeductionsPage() {
 
   useEffect(() => {
     async function load() {
-      const me = await base44.auth.me();
+      const me = await api.get('/api/auth/me').then(r => r.data);
       setUser(me);
-      const d = await base44.entities.TaxDeduction.filter({ worker_email: me.email }, '-date', 200);
+      const d = await TaxDeductions.list({ worker_email: me.email, sort: '-date', limit: 200 });
       setDeductions(d);
       setLoading(false);
     }
@@ -53,14 +54,14 @@ export default function DeductionsPage() {
   async function handleAdd() {
     setSaving(true);
     try {
-      const profile = await base44.entities.WorkerProfile.filter({ user_email: user.email });
+      const profiles = await WorkerProfiles.list({ user_email: user.email });
       let amount = parseFloat(draft.amount) || 0;
       if (draft.category === 'mileage' && draft.miles) {
         amount = parseFloat(draft.miles) * 0.67;
       }
-      await base44.entities.TaxDeduction.create({
+      await TaxDeductions.create({
         worker_email: user.email,
-        worker_name: profile[0]?.full_name || user.full_name || user.email,
+        worker_name: profiles[0]?.full_name || user.full_name || user.email,
         tax_year: parseInt(yearFilter),
         category: draft.category,
         description: draft.description,
@@ -69,7 +70,7 @@ export default function DeductionsPage() {
         date: draft.date,
         notes: draft.notes,
       });
-      const updated = await base44.entities.TaxDeduction.filter({ worker_email: user.email }, '-date', 200);
+      const updated = await TaxDeductions.list({ worker_email: user.email, sort: '-date', limit: 200 });
       setDeductions(updated);
       setShowAdd(false);
       setDraft({ category: '', description: '', amount: '', miles: '', date: format(new Date(), 'yyyy-MM-dd'), notes: '' });

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { LeaveRequests, TaxForms } from '@/api/entities';
 import { Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -28,8 +28,8 @@ export default function NotificationBell({ user, isAdmin }) {
     if (isAdmin) {
       // For admins: recent pending leave requests + tax forms
       const [leaves, forms] = await Promise.all([
-        base44.entities.LeaveRequest.filter({ status: 'pending' }, '-created_date', 5),
-        base44.entities.TaxForm.filter({ status: 'pending' }, '-created_date', 5),
+        LeaveRequests.list({ status: 'pending', sort: '-created_date', limit: 5 }),
+        TaxForms.list({ status: 'pending', sort: '-created_date', limit: 5 }),
       ]);
       leaves.forEach(l => notes.push({
         id: `leave-${l.id}`, type: 'leave',
@@ -44,8 +44,8 @@ export default function NotificationBell({ user, isAdmin }) {
     } else {
       // For workers: pending forms + recent approved/denied leave
       const [forms, leaves] = await Promise.all([
-        base44.entities.TaxForm.filter({ worker_email: user.email, status: 'pending' }, '-created_date', 5),
-        base44.entities.LeaveRequest.filter({ worker_email: user.email }, '-created_date', 5),
+        TaxForms.list({ worker_email: user.email, status: 'pending', sort: '-created_date', limit: 5 }),
+        LeaveRequests.list({ worker_email: user.email, sort: '-created_date', limit: 5 }),
       ]);
       forms.forEach(f => notes.push({
         id: `form-${f.id}`, type: 'form',

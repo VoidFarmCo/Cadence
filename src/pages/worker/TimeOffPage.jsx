@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { LeaveRequests, WorkerProfiles } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -22,11 +23,11 @@ export default function TimeOffPage() {
 
   useEffect(() => {
     async function load() {
-      const me = await base44.auth.me();
+      const me = await api.get('/api/auth/me').then(r => r.data);
       setUser(me);
       const [reqs, profiles] = await Promise.all([
-        base44.entities.LeaveRequest.filter({ worker_email: me.email }, '-created_date'),
-        base44.entities.WorkerProfile.filter({ user_email: me.email }),
+        LeaveRequests.list({ worker_email: me.email, sort: '-created_date' }),
+        WorkerProfiles.list({ user_email: me.email }),
       ]);
       setRequests(reqs);
       setProfile(profiles[0]);
@@ -40,7 +41,7 @@ export default function TimeOffPage() {
     if (form.end_date < form.start_date) { toast.error('End date must be after start date'); return; }
     try {
       const days = differenceInCalendarDays(parseISO(form.end_date), parseISO(form.start_date)) + 1;
-      await base44.entities.LeaveRequest.create({
+      await LeaveRequests.create({
         worker_email: user.email,
         worker_name: user.full_name || profile?.full_name,
         leave_type: form.leave_type,
@@ -54,7 +55,7 @@ export default function TimeOffPage() {
       toast.success('Leave request submitted');
       setDialogOpen(false);
       setForm({ leave_type: 'pto', start_date: '', end_date: '', notes: '' });
-      const reqs = await base44.entities.LeaveRequest.filter({ worker_email: user.email }, '-created_date');
+      const reqs = await LeaveRequests.list({ worker_email: user.email, sort: '-created_date' });
       setRequests(reqs);
     } catch (err) {
       toast.error('Failed to submit leave request');

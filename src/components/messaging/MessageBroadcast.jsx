@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { Messages } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,8 +21,8 @@ export default function MessageBroadcast({ workers }) {
       return;
     }
     setSending(true);
-    const me = await base44.auth.me();
-    await base44.entities.Message.create({
+    const me = await api.get('/api/auth/me').then(r => r.data);
+    await Messages.create({
       type: 'broadcast',
       sender_email: me.email,
       sender_name: me.full_name,
@@ -51,8 +52,8 @@ export default function MessageBroadcast({ workers }) {
         <div className="space-y-4 mt-4">
           <div className="space-y-2">
             <Label>Subject</Label>
-            <Input 
-              value={form.subject} 
+            <Input
+              value={form.subject}
               onChange={e => setForm({...form, subject: e.target.value})}
               placeholder="e.g., Schedule Change Friday"
             />
@@ -73,16 +74,16 @@ export default function MessageBroadcast({ workers }) {
           </div>
           <div className="space-y-2">
             <Label>Message</Label>
-            <Textarea 
-              value={form.content} 
+            <Textarea
+              value={form.content}
               onChange={e => setForm({...form, content: e.target.value})}
               placeholder="Type your announcement..."
               className="h-24"
             />
           </div>
-          <Button 
-            onClick={handleBroadcast} 
-            disabled={sending} 
+          <Button
+            onClick={handleBroadcast}
+            disabled={sending}
             className="w-full gap-2"
           >
             <Send className="w-4 h-4" />

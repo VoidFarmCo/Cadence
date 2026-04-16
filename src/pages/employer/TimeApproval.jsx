@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import PullToRefresh from '@/components/PullToRefresh';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { TimeEntries, WorkerProfiles, AuditLogs } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,8 +23,8 @@ export default function TimeApproval() {
 
   async function load() {
     const [e, w] = await Promise.all([
-      base44.entities.TimeEntry.list('-date', 100),
-      base44.entities.WorkerProfile.filter({ status: 'active' }),
+      TimeEntries.list({ sort: '-date', limit: 100 }),
+      WorkerProfiles.list({ status: 'active' }),
     ]);
     setEntries(e);
     setWorkers(w);
@@ -40,9 +41,9 @@ export default function TimeApproval() {
 
   async function handleApprove(entry) {
     try {
-      const me = await base44.auth.me();
-      await base44.entities.TimeEntry.update(entry.id, { status: 'approved' });
-      await base44.entities.AuditLog.create({
+      const me = await api.get('/api/auth/me').then(r => r.data);
+      await TimeEntries.update(entry.id, { status: 'approved' });
+      await AuditLogs.create({
         action: 'approval',
         entity_type: 'TimeEntry',
         entity_id: entry.id,
@@ -59,9 +60,9 @@ export default function TimeApproval() {
   async function handleReject(entry) {
     if (!editReason) { toast.error('Reason is required'); return; }
     try {
-      const me = await base44.auth.me();
-      await base44.entities.TimeEntry.update(entry.id, { status: 'rejected', edit_reason: editReason });
-      await base44.entities.AuditLog.create({
+      const me = await api.get('/api/auth/me').then(r => r.data);
+      await TimeEntries.update(entry.id, { status: 'rejected', edit_reason: editReason });
+      await AuditLogs.create({
         action: 'approval',
         entity_type: 'TimeEntry',
         entity_id: entry.id,

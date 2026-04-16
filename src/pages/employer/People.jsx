@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import PullToRefresh from '@/components/PullToRefresh';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { WorkerProfiles } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,7 @@ export default function People() {
 
   async function loadWorkers() {
     try {
-      const w = await base44.entities.WorkerProfile.list('-created_date');
+      const w = await WorkerProfiles.list({ sort: '-created_date' });
       setWorkers(w);
     } catch (err) {
       toast.error('Failed to load workers');
@@ -45,14 +46,14 @@ export default function People() {
       return;
     }
     try {
-      const res = await base44.functions.invoke('inviteWorker', {
+      const res = await api.post('/api/auth/invite', {
         email: form.user_email,
         appRole: form.role,
         full_name: form.full_name,
         phone: form.phone,
         worker_type: form.worker_type,
         pay_rate: form.pay_rate,
-      });
+      }).then(r => r.data);
       if (res?.error) {
         toast.error(res.error);
         return;

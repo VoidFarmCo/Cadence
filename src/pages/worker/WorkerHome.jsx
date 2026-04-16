@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import api from '@/api/apiClient';
+import { WorkerProfiles, TimeEntries, TaxForms, LeaveRequests, Shifts, Punches } from '@/api/entities';
 import PullToRefresh from '@/components/PullToRefresh';
 import { Clock, CalendarDays, CalendarOff, FileText, Receipt, TrendingUp, ChevronRight, AlertCircle } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, parseISO } from 'date-fns';
@@ -12,12 +13,12 @@ async function fetchData(email) {
   const weekStart = startOfWeek(now, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 0 });
   const [profiles, entries, forms, leaves, shifts, punches] = await Promise.all([
-    base44.entities.WorkerProfile.filter({ user_email: email }),
-    base44.entities.TimeEntry.filter({ worker_email: email }, '-date', 50),
-    base44.entities.TaxForm.filter({ worker_email: email, status: 'pending' }),
-    base44.entities.LeaveRequest.filter({ worker_email: email, status: 'pending' }),
-    base44.entities.Shift.filter({ worker_email: email }, 'date', 5),
-    base44.entities.Punch.filter({ worker_email: email }, '-created_date', 1),
+    WorkerProfiles.list({ user_email: email }),
+    TimeEntries.list({ worker_email: email, sort: '-date', limit: 50 }),
+    TaxForms.list({ worker_email: email, status: 'pending' }),
+    LeaveRequests.list({ worker_email: email, status: 'pending' }),
+    Shifts.list({ worker_email: email, sort: 'date', limit: 5 }),
+    Punches.list({ worker_email: email, sort: '-created_date', limit: 1 }),
   ]);
   const weekEntries = entries.filter(e => {
     if (!e.date) return false;
@@ -42,7 +43,7 @@ export default function WorkerHome() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    base44.auth.me().then(async (me) => {
+    api.get('/api/auth/me').then(r => r.data).then(async (me) => {
       setUser(me);
       const d = await fetchData(me.email);
       setData(d);
