@@ -49,9 +49,17 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    if (req.user!.role === 'worker' && request.worker_email !== req.user!.email) {
-      res.status(403).json({ error: 'Insufficient permissions' });
-      return;
+    if (req.user!.role === 'worker') {
+      if (request.worker_email !== req.user!.email) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+    } else {
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(request.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
     }
 
     res.json(request);
@@ -169,9 +177,17 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    if (req.user!.role === 'worker' && request.worker_email !== req.user!.email) {
-      res.status(403).json({ error: 'Insufficient permissions' });
-      return;
+    if (req.user!.role === 'worker') {
+      if (request.worker_email !== req.user!.email) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+    } else {
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(request.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
     }
 
     if (request.status !== 'pending') {

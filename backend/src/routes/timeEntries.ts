@@ -58,9 +58,17 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    if (req.user!.role === 'worker' && entry.worker_email !== req.user!.email) {
-      res.status(403).json({ error: 'Insufficient permissions' });
-      return;
+    if (req.user!.role === 'worker') {
+      if (entry.worker_email !== req.user!.email) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+    } else {
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(entry.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
     }
 
     res.json(entry);

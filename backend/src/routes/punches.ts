@@ -58,9 +58,17 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    if (req.user!.role === 'worker' && punch.worker_email !== req.user!.email) {
-      res.status(403).json({ error: 'Insufficient permissions' });
-      return;
+    if (req.user!.role === 'worker') {
+      if (punch.worker_email !== req.user!.email) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+    } else {
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(punch.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
     }
 
     res.json(punch);
@@ -125,6 +133,16 @@ router.delete(
   requireMinRole('manager'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const punch = await prisma.punch.findUnique({ where: { id: req.params.id } });
+      if (!punch) {
+        res.status(404).json({ error: 'Punch not found' });
+        return;
+      }
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(punch.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
       await prisma.punch.delete({ where: { id: req.params.id } });
       res.json({ message: 'Punch deleted' });
     } catch (error) {

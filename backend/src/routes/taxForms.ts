@@ -48,9 +48,17 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    if (req.user!.role === 'worker' && form.worker_email !== req.user!.email) {
-      res.status(403).json({ error: 'Insufficient permissions' });
-      return;
+    if (req.user!.role === 'worker') {
+      if (form.worker_email !== req.user!.email) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+    } else {
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(form.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
     }
 
     res.json(form);
@@ -77,6 +85,12 @@ router.post(
   validate(createTaxFormSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(req.body.worker_email)) {
+        res.status(403).json({ error: 'Worker not found in your company' });
+        return;
+      }
+
       const workerProfile = await prisma.workerProfile.findFirst({
         where: { user_email: req.body.worker_email },
       });
@@ -115,9 +129,17 @@ router.post(
         return;
       }
 
-      if (req.user!.role === 'worker' && form.worker_email !== req.user!.email) {
-        res.status(403).json({ error: 'Insufficient permissions' });
-        return;
+      if (req.user!.role === 'worker') {
+        if (form.worker_email !== req.user!.email) {
+          res.status(403).json({ error: 'Insufficient permissions' });
+          return;
+        }
+      } else {
+        const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+        if (!companyEmails.includes(form.worker_email)) {
+          res.status(403).json({ error: 'Insufficient permissions' });
+          return;
+        }
       }
 
       const updated = await prisma.taxForm.update({
@@ -152,6 +174,17 @@ router.put(
   validate(updateTaxFormSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const existing = await prisma.taxForm.findUnique({ where: { id: req.params.id } });
+      if (!existing) {
+        res.status(404).json({ error: 'Tax form not found' });
+        return;
+      }
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(existing.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+
       const data: any = { ...req.body };
       if (data.due_date) data.due_date = new Date(data.due_date);
 
@@ -173,6 +206,16 @@ router.delete(
   requireMinRole('manager'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const form = await prisma.taxForm.findUnique({ where: { id: req.params.id } });
+      if (!form) {
+        res.status(404).json({ error: 'Tax form not found' });
+        return;
+      }
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(form.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
       await prisma.taxForm.delete({ where: { id: req.params.id } });
       res.json({ message: 'Tax form deleted' });
     } catch (error) {

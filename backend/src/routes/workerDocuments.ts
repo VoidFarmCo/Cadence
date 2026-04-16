@@ -84,6 +84,12 @@ router.post(
   validate(createDocumentSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(req.body.worker_email)) {
+        res.status(403).json({ error: 'Worker not found in your company' });
+        return;
+      }
+
       const workerProfile = await prisma.workerProfile.findFirst({
         where: { user_email: req.body.worker_email },
       });
@@ -121,6 +127,17 @@ router.put(
   validate(updateDocumentSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const existing = await prisma.workerDocument.findUnique({ where: { id: req.params.id } });
+      if (!existing) {
+        res.status(404).json({ error: 'Document not found' });
+        return;
+      }
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(existing.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+
       const data: any = { ...req.body };
       if (data.expiry_date) data.expiry_date = new Date(data.expiry_date);
       if (data.expiry_date === null) data.expiry_date = null;
@@ -143,6 +160,16 @@ router.delete(
   requireMinRole('manager'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const doc = await prisma.workerDocument.findUnique({ where: { id: req.params.id } });
+      if (!doc) {
+        res.status(404).json({ error: 'Document not found' });
+        return;
+      }
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      if (!companyEmails.includes(doc.worker_email)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
       await prisma.workerDocument.delete({ where: { id: req.params.id } });
       res.json({ message: 'Document deleted' });
     } catch (error) {
