@@ -139,6 +139,14 @@ router.put(
         });
       }
 
+      // If status was changed, also update the User record
+      if (req.body.status && req.body.status !== existing.status) {
+        await prisma.user.updateMany({
+          where: { email: existing.user_email },
+          data: { status: req.body.status },
+        });
+      }
+
       await createAuditLog({
         action: 'update',
         entityType: 'worker_profile',

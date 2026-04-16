@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, Trash2 } from 'lucide-react';
+import { Shield, Trash2, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
 import WorkerDocuments from './WorkerDocuments';
 import { WorkerProfiles } from '@/api/entities';
 import { toast } from 'sonner';
@@ -11,8 +11,23 @@ import { toast } from 'sonner';
 const statusColors = { active: 'bg-success/10 text-success', inactive: 'bg-muted text-muted-foreground', pending: 'bg-warning/10 text-warning' };
 const roleLabels = { owner: 'Owner', payroll_admin: 'Payroll Admin', manager: 'Manager', worker: 'Worker' };
 
-export default function WorkerDetailModal({ worker, open, onClose, onDeleted }) {
+export default function WorkerDetailModal({ worker, open, onClose, onDeleted, onUpdated }) {
   const [deleting, setDeleting] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  async function handleStatusChange(newStatus) {
+    setUpdatingStatus(true);
+    try {
+      await WorkerProfiles.update(worker.id, { status: newStatus });
+      const label = newStatus === 'active' ? 'approved' : 'deactivated';
+      toast.success(`${worker.full_name} has been ${label}`);
+      onClose();
+      if (onUpdated) onUpdated();
+    } catch (err) {
+      toast.error(`Failed to update worker status`);
+    }
+    setUpdatingStatus(false);
+  }
 
   async function handleDelete() {
     setDeleting(true);
@@ -95,6 +110,23 @@ export default function WorkerDetailModal({ worker, open, onClose, onDeleted }) 
           <div className="bg-card rounded-xl border border-border p-4">
             <WorkerDocuments worker={worker} readOnly={false} />
           </div>
+
+          {/* Status Actions */}
+          {worker.status === 'pending' && (
+            <Button onClick={() => handleStatusChange('active')} disabled={updatingStatus} className="w-full gap-2 bg-success hover:bg-success/90 text-success-foreground">
+              <CheckCircle className="w-4 h-4" />Approve {worker.worker_type === 'contractor' ? 'Contractor' : 'Worker'}
+            </Button>
+          )}
+          {worker.status === 'active' && (
+            <Button onClick={() => handleStatusChange('inactive')} disabled={updatingStatus} variant="outline" className="w-full gap-2">
+              <XCircle className="w-4 h-4" />Deactivate {worker.worker_type === 'contractor' ? 'Contractor' : 'Worker'}
+            </Button>
+          )}
+          {worker.status === 'inactive' && (
+            <Button onClick={() => handleStatusChange('active')} disabled={updatingStatus} variant="outline" className="w-full gap-2">
+              <RotateCcw className="w-4 h-4" />Reactivate {worker.worker_type === 'contractor' ? 'Contractor' : 'Worker'}
+            </Button>
+          )}
 
           {/* Danger Zone */}
           <AlertDialog>

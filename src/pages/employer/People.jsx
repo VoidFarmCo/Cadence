@@ -199,6 +199,7 @@ export default function People() {
         open={!!selectedWorker}
         onClose={() => setSelectedWorker(null)}
         onDeleted={() => { setSelectedWorker(null); loadWorkers(); }}
+        onUpdated={() => { setSelectedWorker(null); loadWorkers(); }}
       />
     </div>
     </PullToRefresh>
