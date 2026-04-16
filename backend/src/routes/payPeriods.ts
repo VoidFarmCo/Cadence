@@ -102,6 +102,11 @@ router.put(
         res.status(404).json({ error: 'Pay period not found' });
         return;
       }
+      const companyId = await getCompanyId(req.user!.email);
+      if (existing.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
 
       const data: any = { ...req.body };
       if (data.status === 'locked') {
@@ -141,6 +146,11 @@ router.delete(
       const period = await prisma.payPeriod.findUnique({ where: { id: req.params.id } });
       if (!period) {
         res.status(404).json({ error: 'Pay period not found' });
+        return;
+      }
+      const companyId = await getCompanyId(req.user!.email);
+      if (period.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
 

@@ -285,7 +285,18 @@ router.post(
         companyId
       );
 
-      await sendInviteEmail(email, full_name, inviteToken);
+      try {
+        await sendInviteEmail(email, full_name, inviteToken);
+      } catch (emailError) {
+        console.error('Failed to send invite email:', emailError);
+        // User was created but email failed — report partial success so caller can retry
+        res.status(201).json({
+          message: 'User created but invite email failed to send',
+          userId: user.id,
+          emailError: 'SMTP delivery failed. Check email configuration.',
+        });
+        return;
+      }
 
       await createAuditLog({
         action: 'invite',
@@ -297,6 +308,7 @@ router.post(
 
       res.status(201).json({ message: 'Invite sent', userId: user.id });
     } catch (error) {
+      console.error('Failed to send invite:', error);
       res.status(500).json({ error: 'Failed to send invite' });
     }
   }

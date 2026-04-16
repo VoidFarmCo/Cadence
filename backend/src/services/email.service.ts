@@ -23,18 +23,13 @@ export async function sendEmail(
   subject: string,
   html: string
 ): Promise<void> {
-  try {
-    const transport = getTransporter();
-    await transport.sendMail({
-      from: env.SMTP_FROM,
-      to: Array.isArray(to) ? to.join(', ') : to,
-      subject,
-      html,
-    });
-  } catch (error) {
-    console.error('Failed to send email:', error);
-    // Don't throw — email failures shouldn't break the request
-  }
+  const transport = getTransporter();
+  await transport.sendMail({
+    from: env.SMTP_FROM,
+    to: Array.isArray(to) ? to.join(', ') : to,
+    subject,
+    html,
+  });
 }
 
 export async function sendInviteEmail(
