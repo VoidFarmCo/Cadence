@@ -25,11 +25,11 @@ export default function useCurrentUser() {
   }, []);
 
   const workerRole = profile?.role; // 'owner' | 'payroll_admin' | 'manager' | 'worker'
-  const isEmployer = user?.role === 'admin';
+  const isEmployer = ['owner', 'payroll_admin', 'manager'].includes(workerRole);
   const isOwner = workerRole === 'owner';
   const isPayrollAdmin = workerRole === 'payroll_admin' || workerRole === 'owner';
   const isManager = workerRole === 'manager' || isPayrollAdmin;
-  const isWorker = user?.role === 'user';
+  const isWorker = workerRole === 'worker';
   const isContractor = profile?.worker_type === 'contractor';
 
   return { user, profile, loading, isEmployer, isOwner, isPayrollAdmin, isManager, isWorker, isContractor };

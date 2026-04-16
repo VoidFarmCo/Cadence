@@ -29,8 +29,7 @@ export default function RoleRouter() {
           }
 
           if (profiles.length === 0) {
-            // Brand new user with no profile — make them owner and onboard
-            await api.put('/api/auth/me', { role: 'admin' });
+            // Brand new user with no profile — onboard as owner
             setOnboardingStatus('Setting up your account...');
 
             const now = new Date();
@@ -58,13 +57,6 @@ export default function RoleRouter() {
             // Existing user — use their WorkerProfile role as the source of truth
             const profile = profiles[0];
             const profileRole = profile.role || 'worker';
-
-            // Sync platform role: employer roles get 'admin', workers get 'user'
-            const isEmployerRole = ['owner', 'manager', 'payroll_admin'].includes(profileRole);
-            const expectedPlatformRole = isEmployerRole ? 'admin' : 'user';
-            if (me.role !== expectedPlatformRole) {
-              await api.put('/api/auth/me', { role: expectedPlatformRole });
-            }
 
             // Activate pending profiles on first login (invited users)
             if (profile.status === 'pending') {
@@ -102,6 +94,6 @@ export default function RoleRouter() {
     return <Home />;
   }
 
-  const isEmployer = ['admin', 'owner', 'payroll_admin', 'manager'].includes(role);
+  const isEmployer = ['owner', 'payroll_admin', 'manager'].includes(role);
   return <Navigate to={isEmployer ? '/dashboard' : '/worker-home'} replace />;
 }

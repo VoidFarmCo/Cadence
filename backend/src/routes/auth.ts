@@ -171,7 +171,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
       where: { user_email: user.email },
     });
 
-    res.json({ user, profile });
+    res.json(user);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch user' });
   }
