@@ -138,7 +138,9 @@ export default function AdminDashboard() {
       const { data } = await api.get(`/api/admin/accounts?${params}`);
       setAccounts(data.accounts);
       setAccountsTotal(data.total);
-    } catch {}
+    } catch (err) {
+      console.error('Load accounts failed:', err.response?.status, err.response?.data || err.message);
+    }
   }, [accountsPage, accountsSearch, accountsFilter]);
 
   const loadCompanies = useCallback(async () => {
@@ -150,7 +152,9 @@ export default function AdminDashboard() {
       const { data } = await api.get(`/api/admin/companies?${params}`);
       setCompanies(data.companies);
       setCompaniesTotal(data.total);
-    } catch {}
+    } catch (err) {
+      console.error('Load companies failed:', err.response?.status, err.response?.data || err.message);
+    }
   }, [companiesPage, companiesSearch]);
 
   const loadUsers = useCallback(async () => {
@@ -162,7 +166,9 @@ export default function AdminDashboard() {
       const { data } = await api.get(`/api/admin/users?${params}`);
       setUsers(data.users);
       setUsersTotal(data.total);
-    } catch {}
+    } catch (err) {
+      console.error('Load users failed:', err.response?.status, err.response?.data || err.message);
+    }
   }, [usersPage, usersSearch]);
 
   const loadAuditLogs = useCallback(async () => {
@@ -173,7 +179,9 @@ export default function AdminDashboard() {
       const { data } = await api.get(`/api/admin/audit-logs?${params}`);
       setAuditLogs(data.logs);
       setAuditTotal(data.total);
-    } catch {}
+    } catch (err) {
+      console.error('Load audit logs failed:', err.response?.status, err.response?.data || err.message);
+    }
   }, [auditPage]);
 
   // ─── Initial load + tab change ─────────────────────────────────────────────
@@ -202,7 +210,8 @@ export default function AdminDashboard() {
       loadAccounts();
       loadStats();
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to update account');
+      console.error('Update account status failed:', err.response?.status, err.response?.data || err.message);
+      alert(err.response?.data?.error || `Failed to update account (${err.response?.status || 'network error'})`);
     }
   }
 
@@ -214,7 +223,8 @@ export default function AdminDashboard() {
       await api.post(`/api/admin/users/${userId}/set-role`, { platform_role: newRole });
       loadUsers();
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to update role');
+      console.error('Toggle platform role failed:', err.response?.status, err.response?.data || err.message);
+      alert(err.response?.data?.error || `Failed to update role (${err.response?.status || 'network error'})`);
     }
   }
 
@@ -224,8 +234,10 @@ export default function AdminDashboard() {
       await api.delete(`/api/admin/users/${userId}`);
       loadUsers();
       loadStats();
+      alert(`Deleted user ${email}`);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to delete user');
+      console.error('Delete user failed:', err.response?.status, err.response?.data || err.message);
+      alert(err.response?.data?.error || `Failed to delete user (${err.response?.status || 'network error'})`);
     }
   }
 
@@ -237,7 +249,8 @@ export default function AdminDashboard() {
       loadStats();
       alert(`Purged all data for ${companyName}`);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to purge company');
+      console.error('Purge company failed:', err.response?.status, err.response?.data || err.message);
+      alert(err.response?.data?.error || `Failed to purge company (${err.response?.status || 'network error'})`);
     }
   }
 
