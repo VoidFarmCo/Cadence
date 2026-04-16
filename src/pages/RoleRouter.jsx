@@ -28,16 +28,7 @@ export default function RoleRouter() {
           const trialEnd = new Date(now);
           trialEnd.setDate(trialEnd.getDate() + 30);
 
-          // Create Account (trial)
-          await base44.entities.Account.create({
-            owner_email: me.email,
-            owner_name: me.full_name,
-            status: 'trial',
-            trial_start: now.toISOString(),
-            trial_end: trialEnd.toISOString(),
-          });
-
-          // Create WorkerProfile as owner
+          // Create WorkerProfile as owner FIRST
           await base44.entities.WorkerProfile.create({
             user_email: me.email,
             full_name: me.full_name,
@@ -46,8 +37,17 @@ export default function RoleRouter() {
             status: 'active',
           });
 
-          // Assign owner role on the user record
+          // Assign owner role on the user record BEFORE creating Account
           await base44.auth.updateMe({ role: 'owner' });
+
+          // Now create Account (requires owner role)
+          await base44.entities.Account.create({
+            owner_email: me.email,
+            owner_name: me.full_name,
+            status: 'trial',
+            trial_start: now.toISOString(),
+            trial_end: trialEnd.toISOString(),
+          });
 
           // Track new account creation
           base44.analytics.track({
