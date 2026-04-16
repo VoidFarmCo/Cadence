@@ -68,7 +68,7 @@ export default function EmployerSidebar({ user }) {
             <p className="text-[10px] text-sidebar-foreground/50 capitalize">{user?.role || 'owner'}</p>
           </div>
           <button
-            onClick={() => base44.auth.logout()}
+            onClick={() => base44.auth.logout('/')}
             className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
           >
             <LogOut className="w-4 h-4" />

@@ -50,7 +50,7 @@ export default function ProfilePage() {
     if (deleteInput.trim().toLowerCase() !== 'delete') return;
     toast.loading('Deleting account...');
     if (profile) await base44.entities.WorkerProfile.delete(profile.id);
-    await base44.auth.logout();
+    await base44.auth.logout('/');
   }
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" /></div>;
@@ -195,7 +195,7 @@ export default function ProfilePage() {
         </Button>
       </div>
 
-      <Button variant="outline" className="w-full gap-2 text-destructive select-none" onClick={() => base44.auth.logout()}>
+      <Button variant="outline" className="w-full gap-2 text-destructive select-none" onClick={() => base44.auth.logout('/')}>
         <LogOut className="w-4 h-4" />Sign Out
       </Button>
 
