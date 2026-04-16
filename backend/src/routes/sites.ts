@@ -36,7 +36,7 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       res.status(404).json({ error: 'Site not found' });
       return;
     }
-    if (site.company_id !== companyId) {
+    if (!companyId || site.company_id !== companyId) {
       res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
@@ -64,6 +64,10 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const companyId = await getCompanyId(req.user!.email);
+      if (!companyId) {
+        res.status(400).json({ error: 'Company not found' });
+        return;
+      }
       const site = await prisma.site.create({ data: { ...req.body, company_id: companyId } });
       res.status(201).json(site);
     } catch (error) {
@@ -95,7 +99,7 @@ router.put(
         res.status(404).json({ error: 'Site not found' });
         return;
       }
-      if (site.company_id !== companyId) {
+      if (!companyId || site.company_id !== companyId) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
@@ -123,7 +127,7 @@ router.delete(
         res.status(404).json({ error: 'Site not found' });
         return;
       }
-      if (site.company_id !== companyId) {
+      if (!companyId || site.company_id !== companyId) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }

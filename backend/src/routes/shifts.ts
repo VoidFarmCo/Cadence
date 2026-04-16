@@ -150,6 +150,12 @@ router.put(
         return;
       }
 
+      // Verify new worker_email also belongs to this company
+      if (req.body.worker_email && !companyEmails.includes(req.body.worker_email)) {
+        res.status(403).json({ error: 'Target worker not found in your company' });
+        return;
+      }
+
       const data: any = { ...req.body };
       if (data.date) data.date = new Date(data.date);
 

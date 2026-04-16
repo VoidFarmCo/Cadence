@@ -86,7 +86,7 @@ const updateProfileSchema = z.object({
   full_name: z.string().min(1).optional(),
   phone: z.string().optional(),
   worker_type: z.enum(['employee', 'contractor']).optional(),
-  role: z.enum(['owner', 'payroll_admin', 'manager', 'worker']).optional(),
+  role: z.enum(['payroll_admin', 'manager', 'worker']).optional(),
   pay_rate: z.number().positive().optional(),
   default_site_id: z.string().uuid().nullable().optional(),
   status: z.enum(['active', 'inactive', 'pending']).optional(),
@@ -115,6 +115,12 @@ router.put(
       const companyEmails = await getCompanyWorkerEmails(req.user!.email);
       if (!companyEmails.includes(existing.user_email)) {
         res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+
+      // Only owners can change roles
+      if (req.body.role && req.user!.role !== 'owner') {
+        res.status(403).json({ error: 'Only owners can change user roles' });
         return;
       }
 
