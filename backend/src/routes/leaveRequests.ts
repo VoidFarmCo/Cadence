@@ -119,6 +119,11 @@ router.post(
         return;
       }
 
+      if (existing.status !== 'pending') {
+        res.status(400).json({ error: 'Can only review pending leave requests' });
+        return;
+      }
+
       const companyEmails = await getCompanyWorkerEmails(req.user!.email);
       if (!companyEmails.includes(existing.worker_email)) {
         res.status(403).json({ error: 'Insufficient permissions' });

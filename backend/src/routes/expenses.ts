@@ -186,6 +186,11 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       }
     }
 
+    if (expense.status !== 'pending') {
+      res.status(400).json({ error: 'Can only delete pending expenses' });
+      return;
+    }
+
     await prisma.expense.delete({ where: { id: req.params.id } });
     res.json({ message: 'Expense deleted' });
   } catch (error) {

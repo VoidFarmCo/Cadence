@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import PullToRefresh from '@/components/PullToRefresh';
-import api from '@/api/apiClient';
-import { TimeEntries, WorkerProfiles, AuditLogs } from '@/api/entities';
+import { TimeEntries, WorkerProfiles } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -41,15 +40,7 @@ export default function TimeApproval() {
 
   async function handleApprove(entry) {
     try {
-      const me = await api.get('/api/auth/me').then(r => r.data);
       await TimeEntries.update(entry.id, { status: 'approved' });
-      await AuditLogs.create({
-        action: 'approval',
-        entity_type: 'TimeEntry',
-        entity_id: entry.id,
-        performed_by: me.email,
-        details: `Approved time entry for ${entry.worker_name} on ${entry.date}`
-      });
       setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'approved' } : e));
       toast.success('Entry approved');
     } catch (err) {
@@ -60,16 +51,7 @@ export default function TimeApproval() {
   async function handleReject(entry) {
     if (!editReason) { toast.error('Reason is required'); return; }
     try {
-      const me = await api.get('/api/auth/me').then(r => r.data);
       await TimeEntries.update(entry.id, { status: 'rejected', edit_reason: editReason });
-      await AuditLogs.create({
-        action: 'approval',
-        entity_type: 'TimeEntry',
-        entity_id: entry.id,
-        performed_by: me.email,
-        reason: editReason,
-        details: `Rejected time entry for ${entry.worker_name} on ${entry.date}`
-      });
       setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'rejected' } : e));
       setEditDialog(null);
       setEditReason('');

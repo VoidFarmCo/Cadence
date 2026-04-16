@@ -60,10 +60,6 @@ export default function Settings() {
         const updated = await Companies.update(company.id, payload);
         setCompany(updated);
         toast.success('Settings saved');
-      } else {
-        const created = await Companies.create(payload);
-        setCompany(created);
-        toast.success('Company created');
       }
     } catch (err) {
       toast.error('Failed to save settings');

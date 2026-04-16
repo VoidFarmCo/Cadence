@@ -54,9 +54,18 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
     const companyId = await getCompanyId(req.user!.email);
-    if (message.company_id !== companyId) {
+    if (!companyId || message.company_id !== companyId) {
       res.status(403).json({ error: 'Insufficient permissions' });
       return;
+    }
+    // Workers can only see their own messages
+    if (req.user!.role === 'worker') {
+      if (message.sender_email !== req.user!.email &&
+          !message.recipient_emails.includes(req.user!.email) &&
+          message.type !== 'broadcast') {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
     }
     res.json(message);
   } catch (error) {
@@ -114,7 +123,7 @@ router.post('/:id/read', authenticate, async (req: AuthRequest, res: Response) =
       return;
     }
     const companyId = await getCompanyId(req.user!.email);
-    if (message.company_id !== companyId) {
+    if (!companyId || message.company_id !== companyId) {
       res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
@@ -149,7 +158,7 @@ router.delete(
         return;
       }
       const companyId = await getCompanyId(req.user!.email);
-      if (message.company_id !== companyId) {
+      if (!companyId || message.company_id !== companyId) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }

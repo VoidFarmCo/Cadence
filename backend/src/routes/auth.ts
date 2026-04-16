@@ -156,10 +156,25 @@ router.post('/login', validate(loginSchema), async (req: AuthRequest, res: Respo
       return;
     }
 
-    // Check account status and trial expiry
-    const account = await prisma.account.findFirst({
+    // Check account status and trial expiry — for owners and workers
+    let account = await prisma.account.findFirst({
       where: { owner_email: user.email },
     });
+    if (!account) {
+      // For non-owners (workers), find account via their company
+      const profile = await prisma.workerProfile.findFirst({
+        where: { user_email: user.email },
+        select: { company_id: true },
+      });
+      if (profile?.company_id) {
+        const company = await prisma.company.findUnique({ where: { id: profile.company_id } });
+        if (company) {
+          account = await prisma.account.findFirst({
+            where: { owner_email: company.owner_email },
+          });
+        }
+      }
+    }
     if (account) {
       if (account.status === 'locked') {
         res.status(403).json({ error: 'Account is locked', reason: account.lock_reason });
@@ -198,10 +213,6 @@ router.post('/login', validate(loginSchema), async (req: AuthRequest, res: Respo
 });
 
 // ─── Refresh Token ──────────────────────────────────────────────────────────
-
-const refreshSchema = z.object({
-  refreshToken: z.string().min(1),
-});
 
 router.post('/refresh', async (req: AuthRequest, res: Response) => {
   try {
@@ -247,7 +258,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
       where: { user_email: user.email },
     });
 
-    res.json(user);
+    res.json({ ...user, workerProfile: profile });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch user' });
   }
@@ -375,7 +386,9 @@ router.post('/forgot-password', validate(forgotPasswordSchema), async (req: Auth
 
     res.json({ message: 'If the email exists, a reset link has been sent' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to process request' });
+    console.error('Password reset error:', error);
+    // Return same message to prevent email enumeration
+    res.json({ message: 'If the email exists, a reset link has been sent' });
   }
 });
 

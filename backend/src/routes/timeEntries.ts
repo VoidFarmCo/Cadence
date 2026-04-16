@@ -178,6 +178,11 @@ router.put('/:id', authenticate, validate(updateTimeEntrySchema), async (req: Au
         res.status(400).json({ error: 'Can only edit pending or rejected entries' });
         return;
       }
+      // Workers cannot change their own entry status
+      if (req.body.status) {
+        res.status(403).json({ error: 'Workers cannot change entry status' });
+        return;
+      }
     } else {
       // Managers+ can only edit entries for their own company's workers
       const companyEmails = await getCompanyWorkerEmails(req.user!.email);

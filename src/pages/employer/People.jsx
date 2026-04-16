@@ -123,7 +123,6 @@ export default function People() {
                       <SelectItem value="worker">Worker</SelectItem>
                       <SelectItem value="manager">Manager</SelectItem>
                       <SelectItem value="payroll_admin">Payroll Admin</SelectItem>
-                      <SelectItem value="owner">Owner</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -22,10 +22,21 @@ function computePeriodEnd(start: Date, type: PeriodType): Date {
         end.setMonth(end.getMonth() + 1, 0); // last day of current month
       }
       break;
-    case 'monthly':
-      end.setMonth(end.getMonth() + 1);
-      end.setDate(end.getDate() - 1);
+    case 'monthly': {
+      // End = day before same calendar day next month (clamped for short months)
+      const y = start.getFullYear();
+      const m = start.getMonth() + 1;
+      const d = start.getDate();
+      // Day 0 of month m+1 = last day of month m
+      const lastDay = new Date(y, m + 1, 0).getDate();
+      const endDay = Math.min(d, lastDay);
+      end.setFullYear(y, m, endDay - 1);
+      if (endDay - 1 <= 0) {
+        // anchor day 1: end is last day of current anchor month
+        end.setFullYear(y, m, 0);
+      }
       break;
+    }
     default:
       end.setDate(end.getDate() + 13); // fallback biweekly
   }

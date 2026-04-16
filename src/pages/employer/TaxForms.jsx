@@ -80,6 +80,16 @@ const FORM_TEMPLATES = {
   }
 };
 
+// Map display names to backend enum values
+const FORM_TYPE_TO_BACKEND = {
+  'W-4': 'W4',
+  'I-9': 'I9',
+  'W-9': 'W9',
+  'NM State Withholding': 'NM_State_Withholding',
+  'Direct Deposit Auth': 'Direct_Deposit_Auth',
+  'Custom': 'Custom',
+};
+
 const statusConfig = {
   pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
   completed: { label: 'Completed', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
@@ -97,33 +107,36 @@ export default function TaxForms() {
 
   useEffect(() => {
     Promise.all([
-      TaxFormsAPI.list({ sort: '-created_date', limit: 100 }),
+      TaxFormsAPI.list(),
       WorkerProfiles.list({ status: 'active' }),
-    ]).then(([f, w]) => { setForms(f); setWorkers(w); setLoading(false); });
+    ]).then(([f, w]) => { setForms(f); setWorkers(w); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   const handleSend = async () => {
     setSending(true);
-    const me = await api.get('/api/auth/me').then(r => r.data);
-    const worker = workers.find(w => w.user_email === draft.worker_email);
-    const template = FORM_TEMPLATES[draft.form_type] || FORM_TEMPLATES['Custom'];
-    await TaxFormsAPI.create({
-      title: draft.form_type,
-      form_type: draft.form_type,
-      description: draft.description || template.description,
-      worker_email: draft.worker_email,
-      worker_name: worker?.full_name || draft.worker_email,
-      status: 'pending',
-      sent_by: me.email,
-      sent_at: new Date().toISOString(),
-      due_date: draft.due_date || null,
-      fields_config: JSON.stringify(template.fields),
-    });
-    const updated = await TaxFormsAPI.list({ sort: '-created_date', limit: 100 });
-    setForms(updated);
-    setShowSend(false);
-    setDraft({ form_type: '', worker_email: '', due_date: '', description: '' });
-    setSending(false);
+    try {
+      const me = await api.get('/api/auth/me').then(r => r.data);
+      const worker = workers.find(w => w.user_email === draft.worker_email);
+      const template = FORM_TEMPLATES[draft.form_type] || FORM_TEMPLATES['Custom'];
+      await TaxFormsAPI.create({
+        title: draft.form_type,
+        form_type: FORM_TYPE_TO_BACKEND[draft.form_type] || 'Custom',
+        description: draft.description || template.description,
+        worker_email: draft.worker_email,
+        worker_name: worker?.full_name || draft.worker_email,
+        due_date: draft.due_date || undefined,
+        fields_config: JSON.stringify(template.fields),
+      });
+      const updated = await TaxFormsAPI.list();
+      setForms(updated);
+      setShowSend(false);
+      setDraft({ form_type: '', worker_email: '', due_date: '', description: '' });
+    } catch (err) {
+      console.error('Failed to send form:', err);
+    } finally {
+      setSending(false);
+    }
   };
 
   const groupByWorker = forms.reduce((acc, f) => {
@@ -271,8 +284,9 @@ export default function TaxForms() {
             <DialogDescription className="sr-only">View the submitted form response</DialogDescription>
           </DialogHeader>
           {showView?.response_data && (() => {
-            const data = JSON.parse(showView.response_data);
-            const fields = JSON.parse(showView.fields_config || '[]');
+            let data, fields;
+            try { data = JSON.parse(showView.response_data); } catch { data = {}; }
+            try { fields = JSON.parse(showView.fields_config || '[]'); } catch { fields = []; }
             const uploadedUrl = data._uploaded_file_url;
             return (
               <div className="space-y-3 py-2">

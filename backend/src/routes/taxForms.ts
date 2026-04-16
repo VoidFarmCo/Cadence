@@ -129,6 +129,11 @@ router.post(
         return;
       }
 
+      if (form.status === 'completed') {
+        res.status(400).json({ error: 'Form has already been completed' });
+        return;
+      }
+
       if (req.user!.role === 'worker') {
         if (form.worker_email !== req.user!.email) {
           res.status(403).json({ error: 'Insufficient permissions' });

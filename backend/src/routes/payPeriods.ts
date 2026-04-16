@@ -70,6 +70,10 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const cId = await getCompanyId(req.user!.email);
+      if (!cId) {
+        res.status(400).json({ error: 'Company not found' });
+        return;
+      }
       const period = await prisma.payPeriod.create({
         data: {
           start_date: new Date(req.body.start_date),
@@ -194,7 +198,7 @@ router.delete(
         return;
       }
       const companyId = await getCompanyId(req.user!.email);
-      if (period.company_id !== companyId) {
+      if (!companyId || period.company_id !== companyId) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }

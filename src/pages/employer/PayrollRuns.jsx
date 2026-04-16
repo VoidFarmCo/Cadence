@@ -127,7 +127,6 @@ export default function PayrollRuns() {
         total_regular_hours: selectedPeriod.total_regular_hours || 0,
         total_overtime_hours: selectedPeriod.total_overtime_hours || 0,
         submitted_at: new Date().toISOString(),
-        submitted_by: 'current_user',
       });
 
       setRuns(prev => [newRun, ...prev]);
