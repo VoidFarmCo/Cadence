@@ -11,62 +11,71 @@ export default function RoleRouter() {
 
   useEffect(() => {
     async function check() {
-      const authed = await base44.auth.isAuthenticated();
-      setIsAuthenticated(authed);
+      try {
+        const authed = await base44.auth.isAuthenticated();
+        setIsAuthenticated(authed);
 
-      if (authed) {
-        const me = await base44.auth.me();
+        if (authed) {
+          const me = await base44.auth.me();
 
-        // Check if this user already has a WorkerProfile
-        const profiles = await base44.entities.WorkerProfile.filter({ user_email: me.email });
+          // Check if this user already has a WorkerProfile
+          let profiles = [];
+          try {
+            profiles = await base44.entities.WorkerProfile.filter({ user_email: me.email });
+          } catch (e) {
+            console.error('Failed to fetch profiles:', e);
+          }
 
-        if (profiles.length === 0) {
-          // First-time user — run onboarding
-          setOnboardingStatus('Setting up your account...');
+          if (profiles.length === 0) {
+            // First-time user — run onboarding
+            setOnboardingStatus('Setting up your account...');
 
-          const now = new Date();
-          const trialEnd = new Date(now);
-          trialEnd.setDate(trialEnd.getDate() + 30);
+            const now = new Date();
+            const trialEnd = new Date(now);
+            trialEnd.setDate(trialEnd.getDate() + 30);
 
-          // Create WorkerProfile as owner FIRST
-          await base44.entities.WorkerProfile.create({
-            user_email: me.email,
-            full_name: me.full_name,
-            worker_type: 'employee',
-            role: 'owner',
-            status: 'active',
-          });
+            // Assign owner role FIRST so subsequent operations have correct permissions
+            await base44.auth.updateMe({ role: 'owner' });
 
-          // Assign owner role on the user record BEFORE creating Account
-          await base44.auth.updateMe({ role: 'owner' });
+            // Create WorkerProfile as owner
+            await base44.entities.WorkerProfile.create({
+              user_email: me.email,
+              full_name: me.full_name,
+              worker_type: 'employee',
+              role: 'owner',
+              status: 'active',
+            });
 
-          // Now create Account (requires owner role)
-          await base44.entities.Account.create({
-            owner_email: me.email,
-            owner_name: me.full_name,
-            status: 'trial',
-            trial_start: now.toISOString(),
-            trial_end: trialEnd.toISOString(),
-          });
-
-          // Track new account creation
-          base44.analytics.track({
-            eventName: 'new_company_account_created',
-            properties: {
+            // Now create Account (requires owner role)
+            await base44.entities.Account.create({
               owner_email: me.email,
               owner_name: me.full_name,
+              status: 'trial',
               trial_start: now.toISOString(),
               trial_end: trialEnd.toISOString(),
-            }
-          });
+            });
 
-          setRole('owner');
-        } else {
-          setRole(me.role || 'worker');
+            // Track new account creation
+            base44.analytics.track({
+              eventName: 'new_company_account_created',
+              properties: {
+                owner_email: me.email,
+                owner_name: me.full_name,
+                trial_start: now.toISOString(),
+                trial_end: trialEnd.toISOString(),
+              }
+            });
+
+            setRole('owner');
+          } else {
+            setRole(me.role || 'worker');
+          }
         }
+      } catch (e) {
+        console.error('RoleRouter error:', e);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     }
     check();
   }, []);
