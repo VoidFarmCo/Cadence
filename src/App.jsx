@@ -5,7 +5,6 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { useEffect } from 'react';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 import RoleRouter from './pages/RoleRouter';
 import AppPreview from './pages/AppPreview';
@@ -59,17 +58,9 @@ const AuthenticatedApp = () => {
   }
 
   // Handle authentication errors
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Only redirect to login if not on the public landing page
-      if (window.location.pathname !== '/') {
-        navigateToLogin();
-        return null;
-      }
-      // On home page, fall through and render normally (public landing page)
-    }
+  if (authError?.type === 'auth_required' && window.location.pathname !== '/') {
+    navigateToLogin();
+    return null;
   }
 
   // Render the main app

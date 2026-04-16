@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import jwt from 'jsonwebtoken';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 import { env } from './config/env';
@@ -40,6 +41,18 @@ const io = new SocketServer(server, {
 });
 
 initSocket(io);
+
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) return next(new Error('Authentication required'));
+  try {
+    const decoded = jwt.verify(token, env.JWT_SECRET);
+    (socket as any).user = decoded;
+    next();
+  } catch {
+    next(new Error('Invalid token'));
+  }
+});
 
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`);

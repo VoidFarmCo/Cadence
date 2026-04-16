@@ -120,8 +120,13 @@ export async function createInvitedUser(
 }
 
 export async function acceptInvite(token: string, password: string) {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const user = await prisma.user.findFirst({
-    where: { invite_token: token, status: 'pending' },
+    where: {
+      invite_token: token,
+      status: 'pending',
+      created_at: { gt: sevenDaysAgo },
+    },
   });
 
   if (!user) {

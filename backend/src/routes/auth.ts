@@ -21,6 +21,28 @@ import {
 
 const router = Router();
 
+// ─── In-memory brute force protection ───────────────────────────────────────
+
+const loginAttempts = new Map<string, { count: number; firstAttempt: number }>();
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_LOGIN_ATTEMPTS = 10;
+
+function checkLoginRateLimit(identifier: string): boolean {
+  const now = Date.now();
+  const record = loginAttempts.get(identifier);
+  if (!record || now - record.firstAttempt > LOGIN_WINDOW_MS) {
+    loginAttempts.set(identifier, { count: 1, firstAttempt: now });
+    return true;
+  }
+  if (record.count >= MAX_LOGIN_ATTEMPTS) return false;
+  record.count++;
+  return true;
+}
+
+function clearLoginRateLimit(identifier: string): void {
+  loginAttempts.delete(identifier);
+}
+
 // ─── Register (create account + company + owner) ────────────────────────────
 
 const registerSchema = z.object({
@@ -77,6 +99,13 @@ router.post('/login', validate(loginSchema), async (req: AuthRequest, res: Respo
   try {
     const { email, password } = req.body;
 
+    // Brute force protection
+    const identifier = `${req.ip}:${email}`;
+    if (!checkLoginRateLimit(identifier)) {
+      res.status(429).json({ error: 'Too many login attempts. Try again in 15 minutes.' });
+      return;
+    }
+
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.password_hash) {
       res.status(401).json({ error: 'Invalid email or password' });
@@ -94,17 +123,26 @@ router.post('/login', validate(loginSchema), async (req: AuthRequest, res: Respo
       return;
     }
 
-    // Check if the account is locked
+    // Check account status and trial expiry
     const account = await prisma.account.findFirst({
       where: { owner_email: user.email },
     });
-    if (account && account.status === 'locked') {
-      res.status(403).json({
-        error: 'Account is locked',
-        reason: account.lock_reason,
-      });
-      return;
+    if (account) {
+      if (account.status === 'locked') {
+        res.status(403).json({ error: 'Account is locked', reason: account.lock_reason });
+        return;
+      }
+      if (account.status === 'trial' && account.trial_end < new Date()) {
+        await prisma.account.update({
+          where: { id: account.id },
+          data: { status: 'locked', lock_reason: 'trial_expired' },
+        });
+        res.status(403).json({ error: 'Trial has expired. Please upgrade to continue.' });
+        return;
+      }
     }
+
+    clearLoginRateLimit(identifier);
 
     const payload = { userId: user.id, email: user.email, role: user.role };
     const accessToken = generateAccessToken(payload);
