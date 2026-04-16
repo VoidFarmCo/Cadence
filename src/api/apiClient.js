@@ -42,7 +42,10 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
-        window.location.href = '/';
+        // Only redirect if user was on a protected page, not the home/login page
+        if (window.location.pathname !== '/' && window.location.pathname !== '/login') {
+          window.location.href = '/';
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
