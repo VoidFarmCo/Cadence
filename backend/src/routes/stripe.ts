@@ -164,7 +164,8 @@ router.post(
             where: { stripe_subscription_id: subscription.id },
             data: {
               stripe_subscription_status: subscription.status,
-              status: subscription.status === 'active' ? 'active' : undefined,
+              ...(subscription.status === 'active' ? { status: 'active' } : {}),
+              ...(subscription.status === 'past_due' || subscription.status === 'unpaid' ? { status: 'locked', lock_reason: 'payment_failed' } : {}),
             },
           });
           try { getIO().emit('account:updated', { subscription_id: subscription.id }); } catch {}
@@ -196,15 +197,19 @@ router.post(
                 data: { status: 'locked', lock_reason: 'payment_failed' },
               });
               try { getIO().emit('account:updated', { id: account.id }); } catch {}
-              await sendEmail(
-                account.owner_email,
-                'Action required: Payment failed for Cadence',
-                `<h2>Your Cadence payment failed</h2>
+              try {
+                await sendEmail(
+                  account.owner_email,
+                  'Action required: Payment failed for Cadence',
+                  `<h2>Your Cadence payment failed</h2>
                 <p>Hi ${account.owner_name},</p>
                 <p>We were unable to process your payment. Your account has been locked.</p>
                 <p>Please update your billing information to restore access:</p>
                 <p><a href="${env.APP_URL}/billing" style="padding:12px 24px;background:#2563eb;color:white;text-decoration:none;border-radius:6px;">Update Billing</a></p>`
-              );
+                );
+              } catch (emailErr) {
+                console.error('Failed to send payment failure email:', emailErr);
+              }
             }
           }
           break;
