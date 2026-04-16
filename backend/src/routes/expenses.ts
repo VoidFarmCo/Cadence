@@ -2,10 +2,9 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
-import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
-import { getCompanyWorkerEmails } from '../lib/company';
+import { getCompanyId, parsePagination, paginatedResponse } from '../lib/company';
 
 const router = Router();
 
@@ -17,15 +16,16 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const category = qs(req.query.category);
     const start_date = qs(req.query.start_date);
     const end_date = qs(req.query.end_date);
-    const where: any = {};
+
+    const companyId = await getCompanyId(req.user!.email);
+    if (!companyId) { res.json(paginatedResponse([], 0, 1, 50)); return; }
+
+    const where: any = { company_id: companyId };
 
     if (req.user!.role === 'worker') {
       where.worker_email = req.user!.email;
-    } else {
-      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
-      where.worker_email = worker_email
-        ? (companyEmails.includes(worker_email) ? worker_email : '__none__')
-        : { in: companyEmails };
+    } else if (worker_email) {
+      where.worker_email = worker_email;
     }
 
     if (status) where.status = status;
@@ -36,11 +36,17 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
       if (end_date) where.date.lte = new Date(end_date);
     }
 
-    const expenses = await prisma.expense.findMany({
-      where,
-      orderBy: { date: 'desc' },
+    const { skip, take, page, limit } = parsePagination({
+      page: qs(req.query.page),
+      limit: qs(req.query.limit),
     });
-    res.json(expenses);
+
+    const [expenses, total] = await Promise.all([
+      prisma.expense.findMany({ where, orderBy: { date: 'desc' }, skip, take }),
+      prisma.expense.count({ where }),
+    ]);
+
+    res.json(paginatedResponse(expenses, total, page, limit));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch expenses' });
   }
@@ -49,25 +55,20 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 // Get single expense
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const expense = await prisma.expense.findUnique({ where: { id: req.params.id } });
     if (!expense) {
       res.status(404).json({ error: 'Expense not found' });
       return;
     }
-
-    if (req.user!.role === 'worker') {
-      if (expense.worker_email !== req.user!.email) {
-        res.status(403).json({ error: 'Insufficient permissions' });
-        return;
-      }
-    } else {
-      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
-      if (!companyEmails.includes(expense.worker_email)) {
-        res.status(403).json({ error: 'Insufficient permissions' });
-        return;
-      }
+    if (!companyId || expense.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
     }
-
+    if (req.user!.role === 'worker' && expense.worker_email !== req.user!.email) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
     res.json(expense);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch expense' });
@@ -87,6 +88,7 @@ const createExpenseSchema = z.object({
 
 router.post('/', authenticate, validate(createExpenseSchema), async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const workerProfile = await prisma.workerProfile.findFirst({
       where: { user_email: req.user!.email },
     });
@@ -97,6 +99,7 @@ router.post('/', authenticate, validate(createExpenseSchema), async (req: AuthRe
         worker_email: req.user!.email,
         worker_name: workerProfile?.full_name || req.user!.email,
         date: new Date(req.body.date),
+        company_id: companyId,
       },
     });
 
@@ -120,18 +123,15 @@ const updateExpenseSchema = z.object({
 
 router.put('/:id', authenticate, validate(updateExpenseSchema), async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const existing = await prisma.expense.findUnique({ where: { id: req.params.id } });
     if (!existing) {
       res.status(404).json({ error: 'Expense not found' });
       return;
     }
-
-    if (req.user!.role !== 'worker') {
-      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
-      if (!companyEmails.includes(existing.worker_email)) {
-        res.status(403).json({ error: 'Insufficient permissions' });
-        return;
-      }
+    if (!companyId || existing.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
     }
 
     // Workers can only edit their own pending expenses (but not status)
@@ -167,23 +167,20 @@ router.put('/:id', authenticate, validate(updateExpenseSchema), async (req: Auth
 // Delete expense
 router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const expense = await prisma.expense.findUnique({ where: { id: req.params.id } });
     if (!expense) {
       res.status(404).json({ error: 'Expense not found' });
       return;
     }
+    if (!companyId || expense.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
 
-    if (req.user!.role === 'worker') {
-      if (expense.worker_email !== req.user!.email) {
-        res.status(403).json({ error: 'Insufficient permissions' });
-        return;
-      }
-    } else {
-      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
-      if (!companyEmails.includes(expense.worker_email)) {
-        res.status(403).json({ error: 'Insufficient permissions' });
-        return;
-      }
+    if (req.user!.role === 'worker' && expense.worker_email !== req.user!.email) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
     }
 
     if (expense.status !== 'pending') {

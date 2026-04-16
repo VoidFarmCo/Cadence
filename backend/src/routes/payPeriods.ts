@@ -6,7 +6,7 @@ import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
 import { createAuditLog } from '../services/audit.service';
-import { getCompanyId } from '../lib/company';
+import { getCompanyId, parsePagination, paginatedResponse } from '../lib/company';
 import { generatePayPeriodsForCompany } from '../services/payPeriod.service';
 
 const router = Router();
@@ -17,17 +17,23 @@ router.get('/', authenticate, requireMinRole('manager'), async (req: AuthRequest
     const status = qs(req.query.status);
     const companyId = await getCompanyId(req.user!.email);
     if (!companyId) {
-      res.json([]);
+      res.json(paginatedResponse([], 0, 1, 50));
       return;
     }
     const where: any = { company_id: companyId };
     if (status) where.status = status;
 
-    const periods = await prisma.payPeriod.findMany({
-      where,
-      orderBy: { start_date: 'desc' },
+    const { skip, take, page, limit } = parsePagination({
+      page: qs(req.query.page),
+      limit: qs(req.query.limit),
     });
-    res.json(periods);
+
+    const [periods, total] = await Promise.all([
+      prisma.payPeriod.findMany({ where, orderBy: { start_date: 'desc' }, skip, take }),
+      prisma.payPeriod.count({ where }),
+    ]);
+
+    res.json(paginatedResponse(periods, total, page, limit));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch pay periods' });
   }
@@ -132,6 +138,7 @@ router.put(
         reason: req.body.unlock_reason,
         oldValue: existing,
         newValue: updated,
+        companyId,
       });
 
       res.json(updated);

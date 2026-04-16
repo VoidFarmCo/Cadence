@@ -59,6 +59,13 @@ export async function registerOwner(
   const trialEnd = new Date();
   trialEnd.setDate(trialEnd.getDate() + 30);
 
+  const company = await prisma.company.create({
+    data: {
+      name: companyName,
+      owner_email: email,
+    },
+  });
+
   const account = await prisma.account.create({
     data: {
       owner_email: email,
@@ -66,12 +73,7 @@ export async function registerOwner(
       status: 'trial',
       plan: 'solo',
       trial_end: trialEnd,
-    },
-  });
-
-  const company = await prisma.company.create({
-    data: {
-      name: companyName,
+      company_id: company.id,
     },
   });
 

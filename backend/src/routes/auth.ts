@@ -18,7 +18,7 @@ import {
   acceptInvite,
   generateResetToken,
 } from '../services/auth.service';
-import { getIO } from '../lib/socket';
+import { emitToCompany } from '../lib/socket';
 import { getCompanyId } from '../lib/company';
 
 const router = Router();
@@ -108,7 +108,7 @@ router.post('/register', validate(registerSchema), async (req: AuthRequest, res:
     });
 
     // Notify admin dashboard of new signup
-    try { getIO().emit('account:created', { owner_email: account.owner_email, owner_name: account.owner_name }); } catch {}
+    emitToCompany(company.id, 'account:created', { owner_email: account.owner_email, owner_name: account.owner_name });
 
     setAuthCookies(res, accessToken, refreshToken);
     res.status(201).json({
@@ -161,18 +161,15 @@ router.post('/login', validate(loginSchema), async (req: AuthRequest, res: Respo
       where: { owner_email: user.email },
     });
     if (!account) {
-      // For non-owners (workers), find account via their company
+      // For non-owners (workers), find account via their company's FK
       const profile = await prisma.workerProfile.findFirst({
         where: { user_email: user.email },
         select: { company_id: true },
       });
       if (profile?.company_id) {
-        const company = await prisma.company.findUnique({ where: { id: profile.company_id } });
-        if (company) {
-          account = await prisma.account.findFirst({
-            where: { owner_email: company.owner_email },
-          });
-        }
+        account = await prisma.account.findFirst({
+          where: { company_id: profile.company_id },
+        });
       }
     }
     if (account) {

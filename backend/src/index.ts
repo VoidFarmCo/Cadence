@@ -65,11 +65,19 @@ io.use((socket, next) => {
   }
 });
 
-io.on('connection', (socket) => {
-  console.log(`Socket connected: ${socket.id}`);
-  socket.on('disconnect', () => {
-    console.log(`Socket disconnected: ${socket.id}`);
-  });
+io.on('connection', async (socket) => {
+  const user = (socket as any).user;
+  if (user?.email) {
+    // Look up the user's company and join them to a company-scoped room
+    try {
+      const { getCompanyId } = await import('./lib/company');
+      const companyId = await getCompanyId(user.email);
+      if (companyId) {
+        socket.join(`company:${companyId}`);
+      }
+    } catch {}
+  }
+  socket.on('disconnect', () => {});
 });
 
 // ─── Middleware ──────────────────────────────────────────────────────────────

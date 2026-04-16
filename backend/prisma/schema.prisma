@@ -230,6 +230,7 @@ model Account {
   id                          String              @id @default(uuid())
   owner_email                 String
   owner_name                  String
+  company_id                  String?             @unique
   status                      AccountStatus       @default(trial)
   plan                        AccountPlan         @default(solo)
   billing_interval            BillingInterval     @default(month)
@@ -245,14 +246,18 @@ model Account {
   created_at                  DateTime            @default(now())
   updated_at                  DateTime            @updatedAt
 
+  company Company? @relation(fields: [company_id], references: [id])
+
   @@index([owner_email])
   @@index([status])
+  @@index([company_id])
   @@map("accounts")
 }
 
 model Company {
   id                  String        @id @default(uuid())
   name                String
+  owner_email         String        @default("")
   address             String?
   city                String?
   state               String        @default("NM")
@@ -265,6 +270,23 @@ model Company {
   created_at          DateTime      @default(now())
   updated_at          DateTime      @updatedAt
 
+  account         Account?
+  workerProfiles  WorkerProfile[]
+  sites           Site[]
+  punches         Punch[]
+  timeEntries     TimeEntry[]
+  shifts          Shift[]
+  payPeriods      PayPeriod[]
+  payrollRuns     PayrollRun[]
+  expenses        Expense[]
+  leaveRequests   LeaveRequest[]
+  taxDeductions   TaxDeduction[]
+  taxForms        TaxForm[]
+  messages        Message[]
+  workerDocuments WorkerDocument[]
+  auditLogs       AuditLog[]
+
+  @@index([owner_email])
   @@map("companies")
 }
 
@@ -280,11 +302,13 @@ model Site {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
+  company     Company? @relation(fields: [company_id], references: [id])
   punches     Punch[]
   timeEntries TimeEntry[]
   shifts      Shift[]
   expenses    Expense[]
 
+  @@index([company_id])
   @@index([status])
   @@map("sites")
 }
@@ -307,6 +331,8 @@ model WorkerProfile {
   company_id     String?
   created_at     DateTime     @default(now())
   updated_at     DateTime     @updatedAt
+
+  company Company? @relation(fields: [company_id], references: [id])
 
   @@index([user_email])
   @@index([status])
@@ -331,13 +357,16 @@ model Punch {
   note                 String?
   offline_captured     Boolean   @default(false)
   synced_at            DateTime?
+  company_id           String?
   created_at           DateTime  @default(now())
 
-  site Site? @relation(fields: [site_id], references: [id])
+  site    Site?    @relation(fields: [site_id], references: [id])
+  company Company? @relation(fields: [company_id], references: [id])
 
   @@index([worker_email])
   @@index([timestamp])
   @@index([site_id])
+  @@index([company_id])
   @@map("punches")
 }
 
@@ -361,16 +390,19 @@ model TimeEntry {
   edit_reason        String?
   clock_in_latitude  Float?
   clock_in_longitude Float?
+  company_id         String?
   created_at         DateTime        @default(now())
   updated_at         DateTime        @updatedAt
 
   site      Site?      @relation(fields: [site_id], references: [id])
   payPeriod PayPeriod? @relation(fields: [pay_period_id], references: [id])
+  company   Company?   @relation(fields: [company_id], references: [id])
 
   @@index([worker_email])
   @@index([date])
   @@index([status])
   @@index([pay_period_id])
+  @@index([company_id])
   @@map("time_entries")
 }
 
@@ -385,14 +417,17 @@ model Shift {
   end_time     String
   status       ShiftStatus @default(scheduled)
   notes        String?
+  company_id   String?
   created_at   DateTime    @default(now())
   updated_at   DateTime    @updatedAt
 
-  site Site? @relation(fields: [site_id], references: [id])
+  site    Site?    @relation(fields: [site_id], references: [id])
+  company Company? @relation(fields: [company_id], references: [id])
 
   @@index([worker_email])
   @@index([date])
   @@index([site_id])
+  @@index([company_id])
   @@map("shifts")
 }
 
@@ -411,9 +446,11 @@ model PayPeriod {
   created_at           DateTime        @default(now())
   updated_at           DateTime        @updatedAt
 
+  company     Company?     @relation(fields: [company_id], references: [id])
   timeEntries TimeEntry[]
   payrollRuns PayrollRun[]
 
+  @@index([company_id])
   @@index([status])
   @@index([start_date, end_date])
   @@map("pay_periods")
@@ -430,13 +467,16 @@ model PayrollRun {
   submitted_at         DateTime?
   submitted_by         String?
   worker_results       String?          @db.Text
+  company_id           String?
   created_at           DateTime         @default(now())
   updated_at           DateTime         @updatedAt
 
   payPeriod PayPeriod @relation(fields: [pay_period_id], references: [id])
+  company   Company?  @relation(fields: [company_id], references: [id])
 
   @@index([pay_period_id])
   @@index([status])
+  @@index([company_id])
   @@map("payroll_runs")
 }
 
@@ -452,14 +492,17 @@ model Expense {
   notes        String?
   receipt_url  String?
   status       ApprovalStatus  @default(pending)
+  company_id   String?
   created_at   DateTime        @default(now())
   updated_at   DateTime        @updatedAt
 
-  site Site? @relation(fields: [site_id], references: [id])
+  site    Site?    @relation(fields: [site_id], references: [id])
+  company Company? @relation(fields: [company_id], references: [id])
 
   @@index([worker_email])
   @@index([date])
   @@index([status])
+  @@index([company_id])
   @@map("expenses")
 }
 
@@ -477,11 +520,15 @@ model LeaveRequest {
   reviewed_by  String?
   reviewed_at  DateTime?
   denial_reason String?
+  company_id   String?
   created_at   DateTime    @default(now())
   updated_at   DateTime    @updatedAt
 
+  company Company? @relation(fields: [company_id], references: [id])
+
   @@index([worker_email])
   @@index([status])
+  @@index([company_id])
   @@map("leave_requests")
 }
 
@@ -497,11 +544,15 @@ model TaxDeduction {
   date         DateTime?            @db.Date
   receipt_url  String?
   notes        String?
+  company_id   String?
   created_at   DateTime             @default(now())
   updated_at   DateTime             @updatedAt
 
+  company Company? @relation(fields: [company_id], references: [id])
+
   @@index([worker_email])
   @@index([tax_year])
+  @@index([company_id])
   @@map("tax_deductions")
 }
 
@@ -519,11 +570,15 @@ model TaxForm {
   completed_at  DateTime?
   response_data String?       @db.Text
   fields_config String?       @db.Text
+  company_id    String?
   created_at    DateTime      @default(now())
   updated_at    DateTime      @updatedAt
 
+  company Company? @relation(fields: [company_id], references: [id])
+
   @@index([worker_email])
   @@index([status])
+  @@index([company_id])
   @@map("tax_forms")
 }
 
@@ -542,6 +597,9 @@ model Message {
   created_at       DateTime        @default(now())
   updated_at       DateTime        @updatedAt
 
+  company Company? @relation(fields: [company_id], references: [id])
+
+  @@index([company_id])
   @@index([sender_email])
   @@index([category])
   @@map("messages")
@@ -558,11 +616,15 @@ model WorkerDocument {
   notes        String?
   uploaded_by  String?
   expiry_date  DateTime? @db.Date
+  company_id   String?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
+  company Company? @relation(fields: [company_id], references: [id])
+
   @@index([worker_email])
   @@index([doc_type])
+  @@index([company_id])
   @@map("worker_documents")
 }
 
@@ -576,12 +638,15 @@ model AuditLog {
   old_value     String?     @db.Text
   new_value     String?     @db.Text
   details       String?
+  company_id    String?
   created_at    DateTime    @default(now())
 
-  performer User @relation("AuditPerformer", fields: [performed_by], references: [id], onDelete: Cascade)
+  performer User    @relation("AuditPerformer", fields: [performed_by], references: [id], onDelete: Cascade)
+  company   Company? @relation(fields: [company_id], references: [id])
 
   @@index([entity_type, entity_id])
   @@index([performed_by])
   @@index([created_at])
+  @@index([company_id])
   @@map("audit_logs")
 }

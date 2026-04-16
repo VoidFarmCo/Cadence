@@ -6,7 +6,7 @@ import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
 import { createAuditLog } from '../services/audit.service';
-import { getCompanyId, getCompanyWorkerEmails } from '../lib/company';
+import { getCompanyId, parsePagination, paginatedResponse } from '../lib/company';
 import {
   finalizePayPeriodAndStartPayroll,
   submitPayrollRun,
@@ -25,16 +25,29 @@ router.get(
       const status = qs(req.query.status);
       const pay_period_id = qs(req.query.pay_period_id);
       const companyId = await getCompanyId(req.user!.email);
-      const where: any = { payPeriod: { company_id: companyId } };
+      if (!companyId) { res.json(paginatedResponse([], 0, 1, 50)); return; }
+
+      const where: any = { company_id: companyId };
       if (status) where.status = status;
       if (pay_period_id) where.pay_period_id = pay_period_id;
 
-      const runs = await prisma.payrollRun.findMany({
-        where,
-        orderBy: { created_at: 'desc' },
-        include: { payPeriod: true },
+      const { skip, take, page, limit } = parsePagination({
+        page: qs(req.query.page),
+        limit: qs(req.query.limit),
       });
-      res.json(runs);
+
+      const [runs, total] = await Promise.all([
+        prisma.payrollRun.findMany({
+          where,
+          orderBy: { created_at: 'desc' },
+          include: { payPeriod: true },
+          skip,
+          take,
+        }),
+        prisma.payrollRun.count({ where }),
+      ]);
+
+      res.json(paginatedResponse(runs, total, page, limit));
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch payroll runs' });
     }
@@ -57,7 +70,7 @@ router.get(
         res.status(404).json({ error: 'Payroll run not found' });
         return;
       }
-      if (run.payPeriod.company_id !== companyId) {
+      if (run.company_id !== companyId) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
@@ -100,6 +113,7 @@ router.post(
 
       const data: any = { ...req.body };
       if (data.submitted_at) data.submitted_at = new Date(data.submitted_at);
+      data.company_id = companyId;
 
       const run = await prisma.payrollRun.create({ data });
       res.status(201).json(run);
@@ -126,6 +140,7 @@ router.post(
           entityId: result.payPeriod.id,
           performedBy: req.user!.userId,
           details: 'Finalized pay period and created payroll run',
+          companyId,
         });
       }
 
@@ -148,7 +163,7 @@ router.post(
     try {
       const companyId = await getCompanyId(req.user!.email);
       const existing = await prisma.payrollRun.findUnique({ where: { id: req.params.id }, include: { payPeriod: true } });
-      if (!existing || existing.payPeriod.company_id !== companyId) {
+      if (!existing || existing.company_id !== companyId) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
@@ -160,6 +175,7 @@ router.post(
         entityType: 'payroll_run',
         entityId: run.id,
         performedBy: req.user!.userId,
+        companyId,
       });
 
       res.json(run);
@@ -183,7 +199,7 @@ router.post(
     try {
       const companyId = await getCompanyId(req.user!.email);
       const existing = await prisma.payrollRun.findUnique({ where: { id: req.params.id }, include: { payPeriod: true } });
-      if (!existing || existing.payPeriod.company_id !== companyId) {
+      if (!existing || existing.company_id !== companyId) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
@@ -196,6 +212,7 @@ router.post(
         entityId: run.id,
         performedBy: req.user!.userId,
         details: 'Completed payroll run',
+        companyId,
       });
 
       res.json(run);
@@ -220,7 +237,7 @@ router.put(
     try {
       const companyId = await getCompanyId(req.user!.email);
       const existing = await prisma.payrollRun.findUnique({ where: { id: req.params.id }, include: { payPeriod: true } });
-      if (!existing || existing.payPeriod.company_id !== companyId) {
+      if (!existing || existing.company_id !== companyId) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }

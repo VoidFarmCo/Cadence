@@ -5,7 +5,7 @@ import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
-import { getCompanyWorkerEmails } from '../lib/company';
+import { getCompanyId, parsePagination, paginatedResponse } from '../lib/company';
 
 const router = Router();
 
@@ -15,25 +15,32 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const worker_email = qs(req.query.worker_email);
     const status = qs(req.query.status);
     const form_type = qs(req.query.form_type);
-    const where: any = {};
+
+    const companyId = await getCompanyId(req.user!.email);
+    if (!companyId) { res.json(paginatedResponse([], 0, 1, 50)); return; }
+
+    const where: any = { company_id: companyId };
 
     if (req.user!.role === 'worker') {
       where.worker_email = req.user!.email;
-    } else {
-      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
-      where.worker_email = worker_email
-        ? (companyEmails.includes(worker_email) ? worker_email : '__none__')
-        : { in: companyEmails };
+    } else if (worker_email) {
+      where.worker_email = worker_email;
     }
 
     if (status) where.status = status;
     if (form_type) where.form_type = form_type;
 
-    const forms = await prisma.taxForm.findMany({
-      where,
-      orderBy: { created_at: 'desc' },
+    const { skip, take, page, limit } = parsePagination({
+      page: qs(req.query.page),
+      limit: qs(req.query.limit),
     });
-    res.json(forms);
+
+    const [forms, total] = await Promise.all([
+      prisma.taxForm.findMany({ where, orderBy: { created_at: 'desc' }, skip, take }),
+      prisma.taxForm.count({ where }),
+    ]);
+
+    res.json(paginatedResponse(forms, total, page, limit));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch tax forms' });
   }
@@ -42,25 +49,20 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 // Get single tax form
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const form = await prisma.taxForm.findUnique({ where: { id: req.params.id } });
     if (!form) {
       res.status(404).json({ error: 'Tax form not found' });
       return;
     }
-
-    if (req.user!.role === 'worker') {
-      if (form.worker_email !== req.user!.email) {
-        res.status(403).json({ error: 'Insufficient permissions' });
-        return;
-      }
-    } else {
-      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
-      if (!companyEmails.includes(form.worker_email)) {
-        res.status(403).json({ error: 'Insufficient permissions' });
-        return;
-      }
+    if (!companyId || form.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
     }
-
+    if (req.user!.role === 'worker' && form.worker_email !== req.user!.email) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
     res.json(form);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch tax form' });
@@ -85,23 +87,29 @@ router.post(
   validate(createTaxFormSchema),
   async (req: AuthRequest, res: Response) => {
     try {
-      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
-      if (!companyEmails.includes(req.body.worker_email)) {
+      const companyId = await getCompanyId(req.user!.email);
+      if (!companyId) {
+        res.status(400).json({ error: 'Company not found' });
+        return;
+      }
+
+      // Verify target worker is in this company
+      const targetProfile = await prisma.workerProfile.findFirst({
+        where: { user_email: req.body.worker_email, company_id: companyId },
+      });
+      if (!targetProfile) {
         res.status(403).json({ error: 'Worker not found in your company' });
         return;
       }
 
-      const workerProfile = await prisma.workerProfile.findFirst({
-        where: { user_email: req.body.worker_email },
-      });
-
       const form = await prisma.taxForm.create({
         data: {
           ...req.body,
-          worker_name: req.body.worker_name || workerProfile?.full_name || req.body.worker_email,
+          worker_name: req.body.worker_name || targetProfile.full_name || req.body.worker_email,
           sent_by: req.user!.email,
           sent_at: new Date(),
           due_date: req.body.due_date ? new Date(req.body.due_date) : undefined,
+          company_id: companyId,
         },
       });
 
@@ -123,28 +131,23 @@ router.post(
   validate(respondTaxFormSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
       const form = await prisma.taxForm.findUnique({ where: { id: req.params.id } });
       if (!form) {
         res.status(404).json({ error: 'Tax form not found' });
         return;
       }
-
+      if (!companyId || form.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
       if (form.status === 'completed') {
         res.status(400).json({ error: 'Form has already been completed' });
         return;
       }
-
-      if (req.user!.role === 'worker') {
-        if (form.worker_email !== req.user!.email) {
-          res.status(403).json({ error: 'Insufficient permissions' });
-          return;
-        }
-      } else {
-        const companyEmails = await getCompanyWorkerEmails(req.user!.email);
-        if (!companyEmails.includes(form.worker_email)) {
-          res.status(403).json({ error: 'Insufficient permissions' });
-          return;
-        }
+      if (req.user!.role === 'worker' && form.worker_email !== req.user!.email) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
       }
 
       const updated = await prisma.taxForm.update({
@@ -179,13 +182,13 @@ router.put(
   validate(updateTaxFormSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
       const existing = await prisma.taxForm.findUnique({ where: { id: req.params.id } });
       if (!existing) {
         res.status(404).json({ error: 'Tax form not found' });
         return;
       }
-      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
-      if (!companyEmails.includes(existing.worker_email)) {
+      if (!companyId || existing.company_id !== companyId) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
@@ -211,13 +214,13 @@ router.delete(
   requireMinRole('manager'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
       const form = await prisma.taxForm.findUnique({ where: { id: req.params.id } });
       if (!form) {
         res.status(404).json({ error: 'Tax form not found' });
         return;
       }
-      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
-      if (!companyEmails.includes(form.worker_email)) {
+      if (!companyId || form.company_id !== companyId) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }

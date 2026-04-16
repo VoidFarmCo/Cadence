@@ -12,3 +12,12 @@ export function getIO(): SocketServer {
   }
   return io;
 }
+
+/**
+ * Emit an event scoped to a specific company room.
+ * Falls back to no-op if Socket.io isn't initialized.
+ */
+export function emitToCompany(companyId: string | null | undefined, event: string, data: unknown): void {
+  if (!io || !companyId) return;
+  io.to(`company:${companyId}`).emit(event, data);
+}
