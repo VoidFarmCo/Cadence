@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import {
   Users, DollarSign, AlertTriangle, Lock, Building2,
   TrendingUp, Clock, RefreshCw, LogOut, Shield, ChevronLeft,
-  ChevronRight, Search, Unlock, CreditCard, UserCheck, ScrollText,
+  ChevronRight, Search, Unlock, CreditCard, UserCheck, ScrollText, Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -218,6 +218,29 @@ export default function AdminDashboard() {
     }
   }
 
+  async function deleteUser(userId, email) {
+    if (!confirm(`Permanently delete ${email}? This removes their profile, audit logs, and user record. Cannot be undone.`)) return;
+    try {
+      await api.delete(`/api/admin/users/${userId}`);
+      loadUsers();
+      loadStats();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete user');
+    }
+  }
+
+  async function purgeCompany(companyId, companyName) {
+    if (!confirm(`Purge ALL data for ${companyName}? This deletes sites, workers, time entries, payroll, everything. Owner profile is preserved. Cannot be undone.`)) return;
+    try {
+      await api.delete(`/api/admin/companies/${companyId}/purge`);
+      loadCompanies();
+      loadStats();
+      alert(`Purged all data for ${companyName}`);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to purge company');
+    }
+  }
+
   // ─── Loading / Error states ────────────────────────────────────────────────
 
   if (loading) {
@@ -421,11 +444,12 @@ export default function AdminDashboard() {
                     <th className="text-left px-5 py-3 font-medium text-muted-foreground">Status</th>
                     <th className="text-left px-5 py-3 font-medium text-muted-foreground">Users</th>
                     <th className="text-left px-5 py-3 font-medium text-muted-foreground">Created</th>
+                    <th className="text-left px-5 py-3 font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {companies.length === 0 && (
-                    <tr><td colSpan={6} className="px-5 py-8 text-center text-muted-foreground">No companies found</td></tr>
+                    <tr><td colSpan={7} className="px-5 py-8 text-center text-muted-foreground">No companies found</td></tr>
                   )}
                   {companies.map(c => (
                     <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
@@ -435,6 +459,11 @@ export default function AdminDashboard() {
                       <td className="px-5 py-3">{c.status ? statusBadge(c.status) : '—'}</td>
                       <td className="px-5 py-3">{c.user_count}</td>
                       <td className="px-5 py-3 text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>
+                      <td className="px-5 py-3">
+                        <Button size="sm" variant="ghost" className="h-7 text-xs text-red-600 hover:text-red-700" onClick={() => purgeCompany(c.id, c.name)}>
+                          <Trash2 className="w-3 h-3 mr-1" />Purge Data
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -498,18 +527,28 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-5 py-3 text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
                       <td className="px-5 py-3">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-xs"
-                          onClick={() => togglePlatformRole(u.id, u.platform_role)}
-                        >
-                          {u.platform_role === 'superadmin' ? (
-                            <><UserCheck className="w-3 h-3 mr-1" />Revoke Admin</>
-                          ) : (
-                            <><Shield className="w-3 h-3 mr-1" />Make Admin</>
-                          )}
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs"
+                            onClick={() => togglePlatformRole(u.id, u.platform_role)}
+                          >
+                            {u.platform_role === 'superadmin' ? (
+                              <><UserCheck className="w-3 h-3 mr-1" />Revoke Admin</>
+                            ) : (
+                              <><Shield className="w-3 h-3 mr-1" />Make Admin</>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs text-red-600 hover:text-red-700"
+                            onClick={() => deleteUser(u.id, u.email)}
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />Delete
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

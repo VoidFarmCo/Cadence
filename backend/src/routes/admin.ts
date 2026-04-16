@@ -356,4 +356,95 @@ router.get('/audit-logs', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// ─── DELETE /api/admin/companies/:id/purge — wipe ALL data for a company ─────
+
+router.delete('/companies/:id/purge', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const company = await prisma.company.findUnique({ where: { id } });
+    if (!company) {
+      res.status(404).json({ error: 'Company not found' });
+      return;
+    }
+
+    // Delete all related data in order (respecting FK constraints)
+    const tables = [
+      prisma.auditLog.deleteMany({ where: { company_id: id } }),
+      prisma.workerDocument.deleteMany({ where: { company_id: id } }),
+      prisma.message.deleteMany({ where: { company_id: id } }),
+      prisma.taxForm.deleteMany({ where: { company_id: id } }),
+      prisma.taxDeduction.deleteMany({ where: { company_id: id } }),
+      prisma.leaveRequest.deleteMany({ where: { company_id: id } }),
+      prisma.expense.deleteMany({ where: { company_id: id } }),
+      prisma.payrollRun.deleteMany({ where: { company_id: id } }),
+      prisma.payPeriod.deleteMany({ where: { company_id: id } }),
+      prisma.shift.deleteMany({ where: { company_id: id } }),
+      prisma.timeEntry.deleteMany({ where: { company_id: id } }),
+      prisma.punch.deleteMany({ where: { company_id: id } }),
+      prisma.site.deleteMany({ where: { company_id: id } }),
+    ];
+
+    for (const op of tables) {
+      try { await op; } catch (e) { console.log('Purge skip:', (e as any).message); }
+    }
+
+    // Delete worker profiles (except the owner)
+    await prisma.workerProfile.deleteMany({
+      where: { company_id: id, user_email: { not: company.owner_email } },
+    });
+
+    await createAuditLog({
+      action: 'delete',
+      entityType: 'company',
+      entityId: id,
+      performedBy: req.user!.userId,
+      details: `Purged all data for company: ${company.name}`,
+    });
+
+    res.json({ message: `Purged all data for ${company.name}. Owner profile preserved.` });
+  } catch (error) {
+    console.error('Admin purge error:', error);
+    res.status(500).json({ error: 'Failed to purge company data' });
+  }
+});
+
+// ─── DELETE /api/admin/users/:id — hard delete a user ────────────────────────
+
+router.delete('/users/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // Don't allow deleting yourself
+    if (user.id === req.user!.userId) {
+      res.status(400).json({ error: 'Cannot delete your own account' });
+      return;
+    }
+
+    // Delete their worker profile first
+    await prisma.workerProfile.deleteMany({ where: { user_email: user.email } });
+    // Delete audit logs they performed
+    await prisma.auditLog.deleteMany({ where: { performed_by: id } });
+    // Delete the user
+    await prisma.user.delete({ where: { id } });
+
+    await createAuditLog({
+      action: 'delete',
+      entityType: 'user',
+      entityId: id,
+      performedBy: req.user!.userId,
+      details: `Hard-deleted user: ${user.email}`,
+    });
+
+    res.json({ message: `Deleted user ${user.email}` });
+  } catch (error) {
+    console.error('Admin delete-user error:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
 export default router;

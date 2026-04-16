@@ -184,11 +184,12 @@ router.delete(
         return;
       }
 
-      await prisma.workerProfile.update({
+      // Hard-delete the worker profile
+      await prisma.workerProfile.delete({
         where: { id: req.params.id },
-        data: { status: 'inactive' },
       });
 
+      // Deactivate the user account (don't delete — preserves audit trail)
       await prisma.user.updateMany({
         where: { email: profile.user_email },
         data: { status: 'inactive' },
