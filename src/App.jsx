@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { Analytics } from '@vercel/analytics/react';
 
 import RoleRouter from './pages/RoleRouter';
 import AppPreview from './pages/AppPreview';
@@ -120,6 +121,7 @@ function App() {
           <AuthenticatedApp />
         </Router>
         <Toaster />
+        <Analytics />
       </QueryClientProvider>
     </AuthProvider>
   )
