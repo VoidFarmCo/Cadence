@@ -1,0 +1,581 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  owner
+  payroll_admin
+  manager
+  worker
+}
+
+enum UserStatus {
+  active
+  inactive
+  pending
+}
+
+enum AccountStatus {
+  trial
+  active
+  locked
+  cancelled
+}
+
+enum AccountPlan {
+  solo
+  pro
+  business
+  enterprise
+}
+
+enum BillingInterval {
+  month
+  year
+}
+
+enum LockReason {
+  trial_expired
+  payment_failed
+}
+
+enum PayPeriodType {
+  weekly
+  biweekly
+  semimonthly
+  monthly
+}
+
+enum WorkweekStart {
+  sunday
+  monday
+}
+
+enum WorkerType {
+  employee
+  contractor
+}
+
+enum PayPreference {
+  direct_deposit
+  paper_check
+}
+
+enum DDStatus {
+  not_setup
+  setup_in_qb
+}
+
+enum PunchType {
+  clock_in
+  break_start
+  break_end
+  clock_out
+}
+
+enum OofReason {
+  gps_unavailable
+  outside_radius
+  no_site_assigned
+}
+
+enum TimeEntryStatus {
+  pending
+  submitted
+  approved
+  rejected
+  corrected
+}
+
+enum ShiftStatus {
+  scheduled
+  confirmed
+  cancelled
+}
+
+enum PayPeriodStatus {
+  open
+  locked
+  paid
+}
+
+enum PayrollRunStatus {
+  draft
+  reviewing
+  submitted
+  completed
+  failed
+}
+
+enum ExpenseCategory {
+  fuel
+  supplies
+  repairs
+  tools
+  mileage
+  other
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+enum LeaveType {
+  pto
+  sick
+  unpaid
+}
+
+enum LeaveStatus {
+  pending
+  approved
+  denied
+}
+
+enum TaxDeductionCategory {
+  mileage
+  home_office
+  equipment_tools
+  phone_internet
+  meals_entertainment
+  health_insurance
+  retirement
+  other
+}
+
+enum TaxFormType {
+  W4
+  I9
+  W9
+  NM_State_Withholding
+  Direct_Deposit_Auth
+  Custom
+}
+
+enum TaxFormStatus {
+  pending
+  completed
+  expired
+}
+
+enum MessageType {
+  broadcast
+  direct
+}
+
+enum MessageCategory {
+  announcement
+  schedule_change
+  urgent
+  general
+}
+
+enum DocType {
+  id_document
+  certification
+  contract
+  tax_form
+  policy_acknowledgement
+  other
+}
+
+enum AuditAction {
+  create
+  update
+  delete
+  login
+  logout
+  approve
+  reject
+  lock
+  unlock
+  submit
+  invite
+  password_reset
+}
+
+// ─── Models ─────────────────────────────────────────────────────────────────
+
+model User {
+  id            String     @id @default(uuid())
+  email         String     @unique
+  password_hash String
+  full_name     String
+  role          UserRole   @default(worker)
+  status        UserStatus @default(pending)
+  invite_token  String?
+  reset_token   String?
+  reset_token_exp DateTime?
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @updatedAt
+
+  auditLogs AuditLog[] @relation("AuditPerformer")
+
+  @@index([email])
+  @@index([status])
+  @@map("users")
+}
+
+model Account {
+  id                          String              @id @default(uuid())
+  owner_email                 String
+  owner_name                  String
+  status                      AccountStatus       @default(trial)
+  plan                        AccountPlan         @default(solo)
+  billing_interval            BillingInterval     @default(month)
+  trial_start                 DateTime            @default(now())
+  trial_end                   DateTime
+  stripe_customer_id          String?
+  stripe_subscription_id      String?
+  stripe_subscription_status  String?
+  user_limit                  Int                 @default(5)
+  lock_reason                 LockReason?
+  reminder_25_sent            Boolean             @default(false)
+  reminder_29_sent            Boolean             @default(false)
+  created_at                  DateTime            @default(now())
+  updated_at                  DateTime            @updatedAt
+
+  @@index([owner_email])
+  @@index([status])
+  @@map("accounts")
+}
+
+model Company {
+  id                  String        @id @default(uuid())
+  name                String
+  address             String?
+  city                String?
+  state               String        @default("NM")
+  zip                 String?
+  phone               String?
+  pay_period_type     PayPeriodType @default(biweekly)
+  pay_period_start_date DateTime?
+  workweek_start      WorkweekStart @default(sunday)
+  overtime_threshold  Int           @default(40)
+  created_at          DateTime      @default(now())
+  updated_at          DateTime      @updatedAt
+
+  @@map("companies")
+}
+
+model Site {
+  id            String   @id @default(uuid())
+  name          String
+  latitude      Float?
+  longitude     Float?
+  radius_meters Int      @default(200)
+  address       String?
+  status        UserStatus @default(active)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  punches     Punch[]
+  timeEntries TimeEntry[]
+  shifts      Shift[]
+  expenses    Expense[]
+
+  @@index([status])
+  @@map("sites")
+}
+
+model WorkerProfile {
+  id             String       @id @default(uuid())
+  user_email     String
+  full_name      String
+  phone          String?
+  worker_type    WorkerType   @default(employee)
+  role           UserRole     @default(worker)
+  pay_rate       Float?
+  default_site_id String?
+  status         UserStatus   @default(pending)
+  pay_preference PayPreference @default(paper_check)
+  dd_status      DDStatus     @default(not_setup)
+  qb_entity_id   String?
+  pto_balance    Float        @default(0)
+  sick_balance   Float        @default(0)
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
+
+  @@index([user_email])
+  @@index([status])
+  @@map("worker_profiles")
+}
+
+model Punch {
+  id                   String    @id @default(uuid())
+  worker_email         String
+  worker_name          String
+  punch_type           PunchType
+  timestamp            DateTime  @default(now())
+  device_timestamp     DateTime?
+  latitude             Float?
+  longitude            Float?
+  gps_accuracy         Float?
+  site_id              String?
+  site_name            String?
+  out_of_geofence      Boolean   @default(false)
+  out_of_geofence_reason OofReason?
+  note                 String?
+  offline_captured     Boolean   @default(false)
+  synced_at            DateTime?
+  created_at           DateTime  @default(now())
+
+  site Site? @relation(fields: [site_id], references: [id])
+
+  @@index([worker_email])
+  @@index([timestamp])
+  @@index([site_id])
+  @@map("punches")
+}
+
+model TimeEntry {
+  id                 String          @id @default(uuid())
+  worker_email       String
+  worker_name        String
+  date               DateTime        @db.Date
+  clock_in           DateTime?
+  clock_out          DateTime?
+  break_minutes      Int             @default(0)
+  total_hours        Float?
+  regular_hours      Float?
+  overtime_hours     Float           @default(0)
+  site_id            String?
+  site_name          String?
+  status             TimeEntryStatus @default(pending)
+  pay_period_id      String?
+  has_exception      Boolean         @default(false)
+  exception_notes    String?
+  edit_reason        String?
+  clock_in_latitude  Float?
+  clock_in_longitude Float?
+  created_at         DateTime        @default(now())
+  updated_at         DateTime        @updatedAt
+
+  site      Site?      @relation(fields: [site_id], references: [id])
+  payPeriod PayPeriod? @relation(fields: [pay_period_id], references: [id])
+
+  @@index([worker_email])
+  @@index([date])
+  @@index([status])
+  @@index([pay_period_id])
+  @@map("time_entries")
+}
+
+model Shift {
+  id           String      @id @default(uuid())
+  worker_email String
+  worker_name  String
+  site_id      String?
+  site_name    String?
+  date         DateTime    @db.Date
+  start_time   String
+  end_time     String
+  status       ShiftStatus @default(scheduled)
+  notes        String?
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+
+  site Site? @relation(fields: [site_id], references: [id])
+
+  @@index([worker_email])
+  @@index([date])
+  @@index([site_id])
+  @@map("shifts")
+}
+
+model PayPeriod {
+  id                   String          @id @default(uuid())
+  start_date           DateTime        @db.Date
+  end_date             DateTime        @db.Date
+  status               PayPeriodStatus @default(open)
+  locked_at            DateTime?
+  locked_by            String?
+  unlock_reason        String?
+  total_regular_hours  Float           @default(0)
+  total_overtime_hours Float           @default(0)
+  worker_count         Int             @default(0)
+  created_at           DateTime        @default(now())
+  updated_at           DateTime        @updatedAt
+
+  timeEntries TimeEntry[]
+  payrollRuns PayrollRun[]
+
+  @@index([status])
+  @@index([start_date, end_date])
+  @@map("pay_periods")
+}
+
+model PayrollRun {
+  id                   String           @id @default(uuid())
+  pay_period_id        String
+  pay_period_label     String?
+  status               PayrollRunStatus @default(draft)
+  total_regular_hours  Float            @default(0)
+  total_overtime_hours Float            @default(0)
+  worker_count         Int              @default(0)
+  submitted_at         DateTime?
+  submitted_by         String?
+  worker_results       String?          @db.Text
+  created_at           DateTime         @default(now())
+  updated_at           DateTime         @updatedAt
+
+  payPeriod PayPeriod @relation(fields: [pay_period_id], references: [id])
+
+  @@index([pay_period_id])
+  @@index([status])
+  @@map("payroll_runs")
+}
+
+model Expense {
+  id           String          @id @default(uuid())
+  worker_email String
+  worker_name  String
+  category     ExpenseCategory
+  amount       Float
+  date         DateTime        @db.Date
+  site_id      String?
+  site_name    String?
+  notes        String?
+  receipt_url  String?
+  status       ApprovalStatus  @default(pending)
+  created_at   DateTime        @default(now())
+  updated_at   DateTime        @updatedAt
+
+  site Site? @relation(fields: [site_id], references: [id])
+
+  @@index([worker_email])
+  @@index([date])
+  @@index([status])
+  @@map("expenses")
+}
+
+model LeaveRequest {
+  id           String      @id @default(uuid())
+  worker_email String
+  worker_name  String
+  leave_type   LeaveType
+  start_date   DateTime    @db.Date
+  end_date     DateTime    @db.Date
+  total_days   Float?
+  total_hours  Float?
+  notes        String?
+  status       LeaveStatus @default(pending)
+  reviewed_by  String?
+  reviewed_at  DateTime?
+  denial_reason String?
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+
+  @@index([worker_email])
+  @@index([status])
+  @@map("leave_requests")
+}
+
+model TaxDeduction {
+  id           String               @id @default(uuid())
+  worker_email String
+  worker_name  String
+  tax_year     Int
+  category     TaxDeductionCategory
+  description  String?
+  amount       Float?
+  miles        Float?
+  date         DateTime?            @db.Date
+  receipt_url  String?
+  notes        String?
+  created_at   DateTime             @default(now())
+  updated_at   DateTime             @updatedAt
+
+  @@index([worker_email])
+  @@index([tax_year])
+  @@map("tax_deductions")
+}
+
+model TaxForm {
+  id            String        @id @default(uuid())
+  title         String
+  form_type     TaxFormType
+  description   String?
+  worker_email  String
+  worker_name   String
+  status        TaxFormStatus @default(pending)
+  sent_by       String?
+  sent_at       DateTime?
+  due_date      DateTime?     @db.Date
+  completed_at  DateTime?
+  response_data String?       @db.Text
+  fields_config String?       @db.Text
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+
+  @@index([worker_email])
+  @@index([status])
+  @@map("tax_forms")
+}
+
+model Message {
+  id               String          @id @default(uuid())
+  type             MessageType
+  sender_email     String
+  sender_name      String
+  recipient_emails String[]
+  subject          String?
+  content          String
+  category         MessageCategory @default(general)
+  is_read          Boolean         @default(false)
+  read_by          String[]        @default([])
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+
+  @@index([sender_email])
+  @@index([category])
+  @@map("messages")
+}
+
+model WorkerDocument {
+  id           String   @id @default(uuid())
+  worker_email String
+  worker_name  String
+  doc_type     DocType
+  title        String
+  file_url     String?
+  file_name    String?
+  notes        String?
+  uploaded_by  String?
+  expiry_date  DateTime? @db.Date
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@index([worker_email])
+  @@index([doc_type])
+  @@map("worker_documents")
+}
+
+model AuditLog {
+  id            String      @id @default(uuid())
+  action        AuditAction
+  entity_type   String
+  entity_id     String?
+  performed_by  String
+  reason        String?
+  old_value     String?     @db.Text
+  new_value     String?     @db.Text
+  details       String?
+  created_at    DateTime    @default(now())
+
+  performer User @relation("AuditPerformer", fields: [performed_by], references: [id])
+
+  @@index([entity_type, entity_id])
+  @@index([performed_by])
+  @@index([created_at])
+  @@map("audit_logs")
+}
