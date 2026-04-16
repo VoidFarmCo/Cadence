@@ -18,6 +18,13 @@ export default function RoleRouter() {
         if (authed) {
           const me = await base44.auth.me();
 
+          // If user has no elevated role yet, they might be brand new — promote to owner first
+          // so they can query their own WorkerProfile
+          const knownRoles = ['owner', 'admin', 'manager', 'payroll_admin', 'worker'];
+          if (!knownRoles.includes(me.role)) {
+            await base44.auth.updateMe({ role: 'owner' });
+          }
+
           // Check if this user already has a WorkerProfile
           let profiles = [];
           try {
@@ -33,9 +40,6 @@ export default function RoleRouter() {
             const now = new Date();
             const trialEnd = new Date(now);
             trialEnd.setDate(trialEnd.getDate() + 30);
-
-            // Assign owner role FIRST so subsequent operations have correct permissions
-            await base44.auth.updateMe({ role: 'owner' });
 
             // Create WorkerProfile as owner
             await base44.entities.WorkerProfile.create({
