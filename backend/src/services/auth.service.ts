@@ -82,6 +82,7 @@ export async function registerOwner(
       role: UserRole.owner,
       status: 'active',
       worker_type: 'employee',
+      company_id: company.id,
     },
   });
 
@@ -92,7 +93,8 @@ export async function createInvitedUser(
   email: string,
   fullName: string,
   role: UserRole,
-  invitedByEmail: string
+  invitedByEmail: string,
+  companyId: string | null
 ) {
   const inviteToken = generateInviteToken();
 
@@ -113,6 +115,7 @@ export async function createInvitedUser(
       full_name: fullName,
       role,
       status: 'pending',
+      company_id: companyId,
     },
   });
 

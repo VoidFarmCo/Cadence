@@ -6,6 +6,7 @@ import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
 import { getIO } from '../lib/socket';
+import { getCompanyWorkerEmails } from '../lib/company';
 import { checkGeofenceAndAlert } from '../services/geofence.service';
 
 const router = Router();
@@ -20,11 +21,13 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const end_date = qs(req.query.end_date);
     const where: any = {};
 
-    // Workers can only see their own punches
     if (req.user!.role === 'worker') {
       where.worker_email = req.user!.email;
-    } else if (worker_email) {
-      where.worker_email = worker_email;
+    } else {
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      where.worker_email = worker_email
+        ? (companyEmails.includes(worker_email) ? worker_email : '__none__')
+        : { in: companyEmails };
     }
 
     if (site_id) where.site_id = site_id;

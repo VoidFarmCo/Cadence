@@ -19,6 +19,7 @@ import {
   generateResetToken,
 } from '../services/auth.service';
 import { getIO } from '../lib/socket';
+import { getCompanyId } from '../lib/company';
 
 const router = Router();
 
@@ -275,11 +276,13 @@ router.post(
         return;
       }
 
+      const companyId = await getCompanyId(req.user!.email);
       const { user, inviteToken } = await createInvitedUser(
         email,
         full_name,
         role,
-        req.user!.email
+        req.user!.email,
+        companyId
       );
 
       await sendInviteEmail(email, full_name, inviteToken);

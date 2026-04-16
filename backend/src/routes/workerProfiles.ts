@@ -6,6 +6,7 @@ import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
 import { createAuditLog } from '../services/audit.service';
+import { getCompanyId } from '../lib/company';
 
 const router = Router();
 
@@ -14,7 +15,8 @@ router.get('/', authenticate, requireMinRole('manager'), async (req: AuthRequest
   try {
     const status = qs(req.query.status);
     const worker_type = qs(req.query.worker_type);
-    const where: any = {};
+    const companyId = await getCompanyId(req.user!.email);
+    const where: any = { company_id: companyId };
     if (status) where.status = status;
     if (worker_type) where.worker_type = worker_type;
 

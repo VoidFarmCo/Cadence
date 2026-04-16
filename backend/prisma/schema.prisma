@@ -276,6 +276,7 @@ model Site {
   radius_meters Int      @default(200)
   address       String?
   status        UserStatus @default(active)
+  company_id    String?
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
@@ -303,11 +304,13 @@ model WorkerProfile {
   qb_entity_id   String?
   pto_balance    Float        @default(0)
   sick_balance   Float        @default(0)
+  company_id     String?
   created_at     DateTime     @default(now())
   updated_at     DateTime     @updatedAt
 
   @@index([user_email])
   @@index([status])
+  @@index([company_id])
   @@map("worker_profiles")
 }
 
@@ -395,6 +398,7 @@ model Shift {
 
 model PayPeriod {
   id                   String          @id @default(uuid())
+  company_id           String?
   start_date           DateTime        @db.Date
   end_date             DateTime        @db.Date
   status               PayPeriodStatus @default(open)
@@ -525,6 +529,7 @@ model TaxForm {
 
 model Message {
   id               String          @id @default(uuid())
+  company_id       String?
   type             MessageType
   sender_email     String
   sender_name      String

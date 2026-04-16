@@ -4,14 +4,17 @@ import prisma from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
-import { AuthRequest } from '../types';
+import { AuthRequest, qs } from '../types';
+import { getCompanyId } from '../lib/company';
 
 const router = Router();
 
 // List sites
-router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
+router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const sites = await prisma.site.findMany({
+      where: { company_id: companyId },
       orderBy: { name: 'asc' },
     });
     res.json(sites);
@@ -51,7 +54,8 @@ router.post(
   validate(createSiteSchema),
   async (req: AuthRequest, res: Response) => {
     try {
-      const site = await prisma.site.create({ data: req.body });
+      const companyId = await getCompanyId(req.user!.email);
+      const site = await prisma.site.create({ data: { ...req.body, company_id: companyId } });
       res.status(201).json(site);
     } catch (error) {
       res.status(500).json({ error: 'Failed to create site' });

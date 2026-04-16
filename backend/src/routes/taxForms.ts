@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
+import { getCompanyWorkerEmails } from '../lib/company';
 
 const router = Router();
 
@@ -18,8 +19,11 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 
     if (req.user!.role === 'worker') {
       where.worker_email = req.user!.email;
-    } else if (worker_email) {
-      where.worker_email = worker_email;
+    } else {
+      const companyEmails = await getCompanyWorkerEmails(req.user!.email);
+      where.worker_email = worker_email
+        ? (companyEmails.includes(worker_email) ? worker_email : '__none__')
+        : { in: companyEmails };
     }
 
     if (status) where.status = status;

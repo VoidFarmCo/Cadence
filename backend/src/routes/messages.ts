@@ -6,6 +6,7 @@ import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
 import { getIO } from '../lib/socket';
+import { getCompanyId } from '../lib/company';
 
 const router = Router();
 
@@ -16,8 +17,9 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const category = qs(req.query.category);
     const where: any = {};
 
+    const companyId = await getCompanyId(req.user!.email);
+    where.company_id = companyId;
     if (req.user!.role === 'worker') {
-      // Workers see messages where they are a recipient or sender
       where.OR = [
         { sender_email: req.user!.email },
         { recipient_emails: { has: req.user!.email } },
@@ -78,6 +80,7 @@ router.post(
           ...req.body,
           sender_email: req.user!.email,
           sender_name: senderProfile?.full_name || req.user!.email,
+          company_id: senderProfile?.company_id,
         },
       });
 

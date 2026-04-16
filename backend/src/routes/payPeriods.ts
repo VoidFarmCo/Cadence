@@ -6,6 +6,7 @@ import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
 import { createAuditLog } from '../services/audit.service';
+import { getCompanyId } from '../lib/company';
 
 const router = Router();
 
@@ -13,7 +14,8 @@ const router = Router();
 router.get('/', authenticate, requireMinRole('manager'), async (req: AuthRequest, res: Response) => {
   try {
     const status = qs(req.query.status);
-    const where: any = {};
+    const companyId = await getCompanyId(req.user!.email);
+    const where: any = { company_id: companyId };
     if (status) where.status = status;
 
     const periods = await prisma.payPeriod.findMany({
@@ -57,11 +59,13 @@ router.post(
   validate(createPayPeriodSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const cId = await getCompanyId(req.user!.email);
       const period = await prisma.payPeriod.create({
         data: {
           start_date: new Date(req.body.start_date),
           end_date: new Date(req.body.end_date),
           status: req.body.status || 'open',
+          company_id: cId,
         },
       });
       res.status(201).json(period);
