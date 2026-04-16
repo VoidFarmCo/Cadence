@@ -92,6 +92,9 @@
     "create": {
       "$or": [
         {
+          "data.user_email": "{{user.email}}"
+        },
+        {
           "user_condition": {
             "role": "admin"
           }
@@ -99,6 +102,16 @@
         {
           "user_condition": {
             "role": "owner"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "payroll_admin"
           }
         }
       ]

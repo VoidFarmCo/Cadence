@@ -2,6 +2,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
+    // Read body first before SDK consumes the request
+    const body = await req.json();
     const base44 = createClientFromRequest(req);
 
     const user = await base44.auth.me();
@@ -19,26 +21,29 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { email, appRole: inviteeRole, full_name, phone, worker_type, pay_rate } = await req.json();
+    const { email, appRole: inviteeRole, full_name, phone, worker_type, pay_rate } = body;
     if (!email || !inviteeRole) {
       return Response.json({ error: 'email and appRole are required' }, { status: 400 });
     }
 
-    // Create the WorkerProfile with service role to bypass RLS
-    await base44.asServiceRole.entities.WorkerProfile.create({
-      user_email: email,
-      full_name: full_name || '',
-      phone: phone || '',
-      worker_type: worker_type || 'employee',
-      role: inviteeRole,
-      pay_rate: pay_rate ? parseFloat(pay_rate) : undefined,
-      status: 'pending',
-    });
+    // Check if WorkerProfile already exists to avoid duplicates
+    const existing = await base44.asServiceRole.entities.WorkerProfile.filter({ user_email: email });
+    if (existing.length === 0) {
+      await base44.asServiceRole.entities.WorkerProfile.create({
+        user_email: email,
+        full_name: full_name || '',
+        phone: phone || '',
+        worker_type: worker_type || 'employee',
+        role: inviteeRole,
+        pay_rate: pay_rate ? parseFloat(pay_rate) : undefined,
+        status: 'pending',
+      });
+    }
 
     // Employer-side roles need platform 'admin' so they can access employer features. Workers get 'user'.
     const platformRole = ['owner', 'manager', 'payroll_admin'].includes(inviteeRole) ? 'admin' : 'user';
 
-    await base44.asServiceRole.users.inviteUser(email, platformRole);
+    await base44.auth.inviteUser(email, platformRole);
 
     return Response.json({ success: true });
   } catch (error) {
