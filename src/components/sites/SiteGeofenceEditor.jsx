@@ -95,7 +95,7 @@ export default function SiteGeofenceEditor({ site, open, onClose, onSave }) {
             </div>
             <Slider
               min={25}
-              max={1000}
+              max={5000}
               step={25}
               value={[radius]}
               onValueChange={([v]) => setRadius(v)}
@@ -104,7 +104,7 @@ export default function SiteGeofenceEditor({ site, open, onClose, onSave }) {
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>25 m</span>
               <span>~{(radius / 1000).toFixed(2)} km</span>
-              <span>1000 m</span>
+              <span>5000 m</span>
             </div>
           </div>
 

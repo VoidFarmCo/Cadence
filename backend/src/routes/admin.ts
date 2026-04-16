@@ -59,7 +59,7 @@ router.get('/stats', authenticate, requireSuperAdmin, async (req: AuthRequest, r
       } else if (a.status === 'active') {
         stats.active++;
         const planPrice = PLAN_MRR[a.plan] ?? 0;
-        const multiplier = a.billing_interval === 'year' ? 1 : 1;
+        const multiplier = 1; // MRR uses monthly plan price regardless of billing interval
         stats.mrr += planPrice * multiplier;
       } else if (a.status === 'locked') {
         stats.locked++;

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Users as UsersAPI } from '@/api/entities';
+import { useState } from 'react';
+import { WorkerProfiles } from '@/api/entities';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,8 +15,8 @@ export default function Users() {
     queryKey: ['users'],
     queryFn: async () => {
       try {
-        const allUsers = await UsersAPI.list();
-        return allUsers.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+        const profiles = await WorkerProfiles.list();
+        return Array.isArray(profiles) ? profiles.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) : [];
       } catch {
         return [];
       }
@@ -26,7 +26,7 @@ export default function Users() {
   const filteredUsers = users.filter(user => {
     const query = searchQuery.toLowerCase();
     return (
-      user.email?.toLowerCase().includes(query) ||
+      user.user_email?.toLowerCase().includes(query) ||
       user.full_name?.toLowerCase().includes(query) ||
       user.role?.toLowerCase().includes(query)
     );
@@ -34,15 +34,15 @@ export default function Users() {
 
   const stats = {
     total: users.length,
-    admins: users.filter(u => u.role === 'admin').length,
-    users: users.filter(u => u.role === 'user').length,
+    managers: users.filter(u => ['owner', 'payroll_admin', 'manager'].includes(u.role)).length,
+    workers: users.filter(u => u.role === 'worker').length,
   };
 
   return (
     <div className="space-y-6 animate-slide-up">
       <div>
         <h1 className="text-2xl font-bold font-display tracking-tight">Users</h1>
-        <p className="text-sm text-muted-foreground mt-1">View all registered users and signup dates</p>
+        <p className="text-sm text-muted-foreground mt-1">View all team members and their roles</p>
       </div>
 
       {/* Stats */}
@@ -58,20 +58,20 @@ export default function Users() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Admins</CardTitle>
+            <CardTitle className="text-sm font-medium">Managers+</CardTitle>
             <UserCheck className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.admins}</div>
+            <div className="text-2xl font-bold">{stats.managers}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Regular Users</CardTitle>
+            <CardTitle className="text-sm font-medium">Workers</CardTitle>
             <UserCheck className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.users}</div>
+            <div className="text-2xl font-bold">{stats.workers}</div>
           </CardContent>
         </Card>
       </div>
@@ -116,14 +116,14 @@ export default function Users() {
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <span className="text-sm font-semibold text-primary">
-                        {user.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+                        {user.full_name?.charAt(0) || user.user_email?.charAt(0) || 'U'}
                       </span>
                     </div>
                     <div>
                       <p className="font-medium text-sm">{user.full_name || 'No name'}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <Mail className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">{user.email}</span>
+                        <span className="text-xs text-muted-foreground">{user.user_email}</span>
                       </div>
                     </div>
                   </div>
@@ -132,10 +132,10 @@ export default function Users() {
                       <Badge
                         variant="outline"
                         className={
-                          user.role === 'admin'
-                            ? 'bg-destructive/10 text-destructive border-destructive/20'
-                            : user.role === 'owner'
+                          user.role === 'owner'
                             ? 'bg-primary/10 text-primary border-primary/20'
+                            : user.role === 'payroll_admin' || user.role === 'manager'
+                            ? 'bg-warning/10 text-warning border-warning/20'
                             : 'bg-secondary text-secondary-foreground'
                         }
                       >
@@ -143,7 +143,7 @@ export default function Users() {
                       </Badge>
                       <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
                         <Calendar className="w-3 h-3" />
-                        <span>{format(new Date(user.created_date), 'MMM d, yyyy')}</span>
+                        <span>{user.created_at ? format(new Date(user.created_at), 'MMM d, yyyy') : '—'}</span>
                       </div>
                     </div>
                   </div>

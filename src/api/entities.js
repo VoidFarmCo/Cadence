@@ -24,4 +24,3 @@ export const TaxForms = createEntityAPI('/api/tax-forms');
 export const Messages = createEntityAPI('/api/messages');
 export const WorkerDocuments = createEntityAPI('/api/worker-documents');
 export const AuditLogs = createEntityAPI('/api/audit-logs');
-export const Users = createEntityAPI('/api/accounts');

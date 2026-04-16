@@ -42,19 +42,22 @@ export default function Dashboard() {
   // Subscribe to real-time Punch updates via socket.io
   useEffect(() => {
     const socket = getSocket();
-    socket.on('punch:created', ({ punch }) => {
+    function onPunchCreated({ punch }) {
       setPunches(prev => [punch, ...prev].slice(0, 50));
-    });
-    socket.on('punch:updated', ({ punch }) => {
+    }
+    function onPunchUpdated({ punch }) {
       setPunches(prev => prev.map(p => p.id === punch.id ? punch : p));
-    });
-    socket.on('punch:deleted', ({ id }) => {
+    }
+    function onPunchDeleted({ id }) {
       setPunches(prev => prev.filter(p => p.id !== id));
-    });
+    }
+    socket.on('punch:created', onPunchCreated);
+    socket.on('punch:updated', onPunchUpdated);
+    socket.on('punch:deleted', onPunchDeleted);
     return () => {
-      socket.off('punch:created');
-      socket.off('punch:updated');
-      socket.off('punch:deleted');
+      socket.off('punch:created', onPunchCreated);
+      socket.off('punch:updated', onPunchUpdated);
+      socket.off('punch:deleted', onPunchDeleted);
     };
   }, []);
 

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import api from '@/api/apiClient';
-import { Accounts } from '@/api/entities';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CreditCard, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
@@ -72,16 +71,21 @@ export default function Billing() {
     if (params.get('success')) {
       toast.success('Payment successful! Your plan will update shortly.');
       window.history.replaceState({}, '', window.location.pathname);
-    } else if (params.get('cancelled')) {
+    } else if (params.get('canceled') || params.get('cancelled')) {
       toast.info('Checkout cancelled.');
       window.history.replaceState({}, '', window.location.pathname);
     }
 
     async function load() {
-      const me = await api.get('/api/auth/me').then(r => r.data);
-      const accounts = await Accounts.list({ owner_email: me.email });
-      setAccount(accounts[0] || null);
-      setLoading(false);
+      try {
+        const me = await api.get('/api/auth/me').then(r => r.data);
+        const accountData = await api.get('/api/accounts').then(r => r.data);
+        setAccount(accountData || null);
+      } catch (err) {
+        console.error('Failed to load billing data:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, []);
