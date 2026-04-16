@@ -27,6 +27,25 @@ router.get('/', authenticate, requireRole('owner'), async (req: AuthRequest, res
   }
 });
 
+// Get single account by ID
+router.get('/:id', authenticate, requireRole('owner'), async (req: AuthRequest, res: Response) => {
+  try {
+    const companyId = await getCompanyId(req.user!.email);
+    const account = await prisma.account.findUnique({ where: { id: req.params.id } });
+    if (!account) {
+      res.status(404).json({ error: 'Account not found' });
+      return;
+    }
+    if (account.company_id !== companyId && account.owner_email !== req.user!.email) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
+    res.json(account);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch account' });
+  }
+});
+
 // Update account (plan/billing_interval are managed by Stripe webhooks only)
 const updateAccountSchema = z.object({
   owner_name: z.string().min(1).optional(),

@@ -29,6 +29,25 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Get single company
+router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const companyId = await getCompanyId(req.user!.email);
+    const company = await prisma.company.findUnique({ where: { id: req.params.id } });
+    if (!company) {
+      res.status(404).json({ error: 'Company not found' });
+      return;
+    }
+    if (!companyId || company.id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
+    res.json(company);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch company' });
+  }
+});
+
 // Update company settings
 const updateCompanySchema = z.object({
   name: z.string().min(1).optional(),
