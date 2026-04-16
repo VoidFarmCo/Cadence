@@ -112,6 +112,8 @@ router.post('/register', validate(registerSchema), async (req: AuthRequest, res:
 
     setAuthCookies(res, accessToken, refreshToken);
     res.status(201).json({
+      accessToken,
+      refreshToken,
       user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, platform_role: user.platform_role },
       account,
       company,
@@ -210,6 +212,8 @@ router.post('/login', validate(loginSchema), async (req: AuthRequest, res: Respo
 
     setAuthCookies(res, accessToken, refreshToken);
     res.json({
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -355,6 +359,8 @@ router.post('/accept-invite', validate(acceptInviteSchema), async (req: AuthRequ
 
     setAuthCookies(res, accessToken, refreshToken);
     res.json({
+      accessToken,
+      refreshToken,
       user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, platform_role: user.platform_role },
     });
   } catch (error: any) {

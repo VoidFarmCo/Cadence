@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '@/api/apiClient';
+import { setTokens } from '@/utils/auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
@@ -35,7 +36,10 @@ export default function AcceptInvite() {
 
     setLoading(true);
     try {
-      await api.post('/api/auth/accept-invite', { token, password });
+      const { data } = await api.post('/api/auth/accept-invite', { token, password });
+      if (data.accessToken && data.refreshToken) {
+        setTokens(data.accessToken, data.refreshToken);
+      }
       setDone(true);
       setTimeout(() => navigate('/'), 2000);
     } catch (err) {
