@@ -18,8 +18,7 @@ export default function RoleRouter() {
         if (authed) {
           const me = await base44.auth.me();
 
-          // If user has no elevated role yet, they might be brand new — promote to owner first
-          // so they can query their own WorkerProfile
+          // Promote to owner first so RLS allows querying WorkerProfile
           const knownRoles = ['owner', 'admin', 'manager', 'payroll_admin', 'worker'];
           if (!knownRoles.includes(me.role)) {
             await base44.auth.updateMe({ role: 'owner' });
@@ -34,14 +33,15 @@ export default function RoleRouter() {
           }
 
           if (profiles.length === 0) {
-            // First-time user — run onboarding
+            // First-time user — ensure owner role is set
+            await base44.auth.updateMe({ role: 'owner' });
+
             setOnboardingStatus('Setting up your account...');
 
             const now = new Date();
             const trialEnd = new Date(now);
             trialEnd.setDate(trialEnd.getDate() + 30);
 
-            // Create WorkerProfile as owner
             await base44.entities.WorkerProfile.create({
               user_email: me.email,
               full_name: me.full_name,
@@ -50,7 +50,6 @@ export default function RoleRouter() {
               status: 'active',
             });
 
-            // Now create Account (requires owner role)
             await base44.entities.Account.create({
               owner_email: me.email,
               owner_name: me.full_name,
@@ -59,7 +58,6 @@ export default function RoleRouter() {
               trial_end: trialEnd.toISOString(),
             });
 
-            // Track new account creation
             base44.analytics.track({
               eventName: 'new_company_account_created',
               properties: {
@@ -72,7 +70,9 @@ export default function RoleRouter() {
 
             setRole('owner');
           } else {
-            setRole(me.role || 'worker');
+            // Re-fetch the user to get the latest role (not the cached pre-promotion value)
+            const freshMe = await base44.auth.me();
+            setRole(freshMe.role || 'worker');
           }
         }
       } catch (e) {
