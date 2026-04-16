@@ -18,9 +18,7 @@ export default function NavigationHeader({ user, isAdmin }) {
       <div className="flex items-center justify-between h-14 px-4 max-w-lg mx-auto">
         {isRoot ? (
           <Link to="/worker-home" className="flex items-center gap-2 select-none">
-            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-xs font-bold text-primary-foreground">⚡</span>
-            </div>
+            <img src="https://media.base44.com/images/public/69db595f420acc2fe622536d/9b4a5552a_cadence_logo_v3b.png" alt="Cadence" className="w-7 h-7 object-contain" />
             <span className="font-bold text-sm font-display text-primary">Cadence</span>
           </Link>
         ) : (
