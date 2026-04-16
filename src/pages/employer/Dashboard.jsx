@@ -18,17 +18,22 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function load() {
-      const [w, p, lr, pp] = await Promise.all([
-        base44.entities.WorkerProfile.filter({ status: 'active' }),
-        base44.entities.Punch.list('-created_date', 50),
-        base44.entities.LeaveRequest.filter({ status: 'pending' }),
-        base44.entities.PayPeriod.list('-start_date', 3),
-      ]);
-      setWorkers(w);
-      setPunches(p);
-      setLeaveRequests(lr);
-      setPayPeriods(pp);
-      setLoading(false);
+      try {
+        const [w, p, lr, pp] = await Promise.all([
+          base44.entities.WorkerProfile.filter({ status: 'active' }),
+          base44.entities.Punch.list('-created_date', 50),
+          base44.entities.LeaveRequest.filter({ status: 'pending' }),
+          base44.entities.PayPeriod.list('-start_date', 3),
+        ]);
+        setWorkers(w);
+        setPunches(p);
+        setLeaveRequests(lr);
+        setPayPeriods(pp);
+      } catch (err) {
+        console.error('Dashboard load error:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, []);

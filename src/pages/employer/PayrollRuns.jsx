@@ -41,6 +41,7 @@ export default function PayrollRuns() {
     if (submitting) return;
     setSubmitting(true);
 
+    try {
     // Fetch approved time entries for this period
     const entries = await base44.entities.TimeEntry.filter({ pay_period_id: selectedPeriod.id, status: 'approved' });
 
@@ -86,7 +87,11 @@ export default function PayrollRuns() {
     setRuns(prev => [newRun, ...prev]);
     setCurrentStep(3);
     toast.success(`Payroll exported as ${format.toUpperCase()}`);
-    setSubmitting(false);
+    } catch (err) {
+      toast.error('Failed to export payroll: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const statusColors = {

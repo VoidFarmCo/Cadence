@@ -20,30 +20,38 @@ export default function TimeOffAdmin() {
   }, []);
 
   async function handleApprove(req) {
-    const me = await base44.auth.me();
-    await base44.entities.LeaveRequest.update(req.id, {
-      status: 'approved', reviewed_by: me.email, reviewed_at: new Date().toISOString()
-    });
-    await base44.entities.AuditLog.create({
-      action: 'leave_approve', entity_type: 'LeaveRequest', entity_id: req.id, performed_by: me.email
-    });
-    setRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'approved' } : r));
-    toast.success('Leave approved');
+    try {
+      const me = await base44.auth.me();
+      await base44.entities.LeaveRequest.update(req.id, {
+        status: 'approved', reviewed_by: me.email, reviewed_at: new Date().toISOString()
+      });
+      await base44.entities.AuditLog.create({
+        action: 'leave_approve', entity_type: 'LeaveRequest', entity_id: req.id, performed_by: me.email
+      });
+      setRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'approved' } : r));
+      toast.success('Leave approved');
+    } catch (err) {
+      toast.error('Failed to approve leave request');
+    }
   }
 
   async function handleDeny() {
     if (!denyReason) { toast.error('Reason required'); return; }
-    const me = await base44.auth.me();
-    await base44.entities.LeaveRequest.update(denyDialog.id, {
-      status: 'denied', reviewed_by: me.email, reviewed_at: new Date().toISOString(), denial_reason: denyReason
-    });
-    await base44.entities.AuditLog.create({
-      action: 'leave_deny', entity_type: 'LeaveRequest', entity_id: denyDialog.id, performed_by: me.email, reason: denyReason
-    });
-    setRequests(prev => prev.map(r => r.id === denyDialog.id ? { ...r, status: 'denied' } : r));
-    setDenyDialog(null);
-    setDenyReason('');
-    toast.success('Leave denied');
+    try {
+      const me = await base44.auth.me();
+      await base44.entities.LeaveRequest.update(denyDialog.id, {
+        status: 'denied', reviewed_by: me.email, reviewed_at: new Date().toISOString(), denial_reason: denyReason
+      });
+      await base44.entities.AuditLog.create({
+        action: 'leave_deny', entity_type: 'LeaveRequest', entity_id: denyDialog.id, performed_by: me.email, reason: denyReason
+      });
+      setRequests(prev => prev.map(r => r.id === denyDialog.id ? { ...r, status: 'denied' } : r));
+      setDenyDialog(null);
+      setDenyReason('');
+      toast.success('Leave denied');
+    } catch (err) {
+      toast.error('Failed to deny leave request');
+    }
   }
 
   const typeLabels = { pto: 'PTO', sick: 'Sick', unpaid: 'Unpaid' };

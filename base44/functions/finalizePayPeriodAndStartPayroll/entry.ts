@@ -4,10 +4,15 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    // Allow admin, owner, and payroll_admin roles
+    // Check WorkerProfile role as source of truth (platform role may be 'admin' for all employer users)
+    const profiles = await base44.asServiceRole.entities.WorkerProfile.filter({ user_email: user.email });
+    const appRole = profiles[0]?.role || user.role;
     const allowedRoles = ['admin', 'owner', 'payroll_admin'];
-    if (!user || !allowedRoles.includes(user.role)) {
+    if (!allowedRoles.includes(appRole)) {
       return Response.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 });
     }
 

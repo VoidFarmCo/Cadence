@@ -11,8 +11,8 @@ const PLANS = [
     name: 'Solo',
     monthlyPrice: 15,
     annualPrice: 150,
-    monthlyPriceId: 'price_1TMNnrDPghjun5PiGhCRtxT6',
-    annualPriceId: 'price_1TMNnrDPghjun5Pifkhmi6ma',
+    monthlyPriceId: 'price_1TMGsDDPghjun5PixSQyO7gs',
+    annualPriceId: 'price_1TMGsDDPghjun5Pizf7LFxjd',
     description: '1 user',
     features: ['1 user account', 'GPS time clock', 'Basic reporting', 'Tax forms'],
   },
@@ -21,8 +21,8 @@ const PLANS = [
     name: 'Pro',
     monthlyPrice: 40,
     annualPrice: 400,
-    monthlyPriceId: 'price_1TMNnrDPghjun5PiMLZ0UpIO',
-    annualPriceId: 'price_1TMNnrDPghjun5PiZDt9pkoW',
+    monthlyPriceId: 'price_1TMGsDDPghjun5Pi1KcCN4yt',
+    annualPriceId: 'price_1TMGsDDPghjun5PiynXY1nGn',
     description: 'Up to 5 users',
     features: ['5 user accounts', 'GPS time clock', 'Advanced reports', 'Payroll runs', 'Schedule management'],
     popular: true,
@@ -32,8 +32,8 @@ const PLANS = [
     name: 'Business',
     monthlyPrice: 100,
     annualPrice: 1000,
-    monthlyPriceId: 'price_1TMNnrDPghjun5PizN6NfnUQ',
-    annualPriceId: 'price_1TMNnrDPghjun5PishIEer7e',
+    monthlyPriceId: 'price_1TMGsDDPghjun5PiCFdTX8Wi',
+    annualPriceId: 'price_1TMGsDDPghjun5Pie9vyRaPb',
     description: 'Up to 20 users',
     features: ['20 user accounts', 'All Pro features', 'Check.hq integration', 'Priority support'],
   },
@@ -42,18 +42,14 @@ const PLANS = [
     name: 'Business Pro',
     monthlyPrice: 225,
     annualPrice: 2250,
-    monthlyPriceId: 'price_1TMNnrDPghjun5Pie371V6lb',
-    annualPriceId: 'price_1TMNnrDPghjun5Pist2YtIMA',
+    monthlyPriceId: 'price_1TMGwDDPghjun5Pi7Q74Xy9U',
+    annualPriceId: 'price_1TMGwDDPghjun5PiBFsszW9I',
     description: 'Up to 50 users',
     features: ['50 user accounts', 'All Business features', 'Advanced integrations', 'Dedicated support'],
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    monthlyPrice: 250,
-    annualPrice: 2500,
-    monthlyPriceId: 'price_1TMNnrDPghjun5PiPnBAzOSS',
-    annualPriceId: 'price_1TMNnrDPghjun5PiYVdeMPu3',
     enterprise: true,
     description: 'Unlimited users',
     features: ['Unlimited user accounts', 'All Business features', 'Custom integrations', 'Dedicated account manager'],
@@ -96,7 +92,7 @@ export default function Billing() {
     try {
       const priceId = billingInterval === 'monthly' ? plan.monthlyPriceId : plan.annualPriceId;
       const res = await base44.functions.invoke('createCheckout', { price_id: priceId, plan_id: plan.id });
-      const url = res.data?.url;
+      const url = res?.url || res?.data?.url;
       if (!url) throw new Error('No checkout URL returned');
 
       // Check if running in iframe

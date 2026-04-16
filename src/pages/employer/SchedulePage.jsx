@@ -35,23 +35,31 @@ export default function SchedulePage() {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   async function handleAdd() {
-    const worker = workers.find(w => w.user_email === draft.worker_email);
-    const site = sites.find(s => s.id === draft.site_id);
-    await base44.entities.Shift.create({
-      ...draft,
-      worker_name: worker?.full_name || draft.worker_email,
-      site_name: site?.name || '',
-      status: 'scheduled',
-    });
-    toast.success('Shift added');
-    setShowAdd(false);
-    setDraft({ worker_email: '', site_id: '', date: '', start_time: '07:00', end_time: '15:00', notes: '' });
-    loadShifts();
+    try {
+      const worker = workers.find(w => w.user_email === draft.worker_email);
+      const site = sites.find(s => s.id === draft.site_id);
+      await base44.entities.Shift.create({
+        ...draft,
+        worker_name: worker?.full_name || draft.worker_email,
+        site_name: site?.name || '',
+        status: 'scheduled',
+      });
+      toast.success('Shift added');
+      setShowAdd(false);
+      setDraft({ worker_email: '', site_id: '', date: '', start_time: '07:00', end_time: '15:00', notes: '' });
+      loadShifts();
+    } catch (err) {
+      toast.error('Failed to add shift');
+    }
   }
 
   async function deleteShift(id) {
-    await base44.entities.Shift.delete(id);
-    setShifts(s => s.filter(x => x.id !== id));
+    try {
+      await base44.entities.Shift.delete(id);
+      setShifts(s => s.filter(x => x.id !== id));
+    } catch (err) {
+      toast.error('Failed to delete shift');
+    }
   }
 
   const statusColor = { scheduled: 'bg-info/10 text-info', confirmed: 'bg-success/10 text-success', cancelled: 'bg-muted text-muted-foreground' };
@@ -160,10 +168,10 @@ export default function SchedulePage() {
             </div>
             <div className="space-y-1.5">
               <Label>Site (optional)</Label>
-              <Select value={draft.site_id} onValueChange={v => setDraft(d => ({ ...d, site_id: v }))}>
+              <Select value={draft.site_id} onValueChange={v => setDraft(d => ({ ...d, site_id: v === '__none__' ? '' : v }))}>
                 <SelectTrigger><SelectValue placeholder="Select site…" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={null}>No site</SelectItem>
+                  <SelectItem value="__none__">No site</SelectItem>
                   {sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>

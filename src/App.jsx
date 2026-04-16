@@ -38,9 +38,10 @@ function useDarkMode() {
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = (dark) => document.documentElement.classList.toggle('dark', dark);
+    const handler = (e) => apply(e.matches);
     apply(mq.matches);
-    mq.addEventListener('change', e => apply(e.matches));
-    return () => mq.removeEventListener('change', e => apply(e.matches));
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
   }, []);
 }
 
