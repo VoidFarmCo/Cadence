@@ -26,10 +26,11 @@ export default function WorkerMessages() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
+    let unsubscribe;
     async function load() {
       const me = await base44.auth.me();
       setUser(me);
-      
+
       const msgs = await base44.entities.Message.filter({
         recipient_emails: me.email
       }, '-created_date', 20);
@@ -37,16 +38,15 @@ export default function WorkerMessages() {
       setLoading(false);
 
       // Subscribe to new messages
-      const unsubscribe = base44.entities.Message.subscribe((event) => {
+      unsubscribe = base44.entities.Message.subscribe((event) => {
         if (event.type === 'create' && event.data.recipient_emails?.includes(me.email)) {
           setMessages(prev => [event.data, ...prev]);
         }
       });
-
-      return unsubscribe;
     }
 
-    load().then(unsub => () => unsub?.());
+    load();
+    return () => { if (unsubscribe) unsubscribe(); };
   }, []);
 
   async function handleMarkRead(message) {

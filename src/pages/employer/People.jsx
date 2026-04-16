@@ -24,9 +24,14 @@ export default function People() {
   }, []);
 
   async function loadWorkers() {
-    const w = await base44.entities.WorkerProfile.list('-created_date');
-    setWorkers(w);
-    setLoading(false);
+    try {
+      const w = await base44.entities.WorkerProfile.list('-created_date');
+      setWorkers(w);
+    } catch (err) {
+      toast.error('Failed to load workers');
+    } finally {
+      setLoading(false);
+    }
   }
 
   const filtered = workers.filter(w =>
@@ -39,18 +44,26 @@ export default function People() {
       toast.error('Name and email are required');
       return;
     }
-    await base44.functions.invoke('inviteWorker', {
-      email: form.user_email,
-      appRole: form.role,
-      full_name: form.full_name,
-      phone: form.phone,
-      worker_type: form.worker_type,
-      pay_rate: form.pay_rate,
-    });
-    toast.success(`Invited ${form.full_name}`);
-    setDialogOpen(false);
-    setForm({ full_name: '', user_email: '', phone: '', worker_type: 'employee', role: 'worker', pay_rate: '' });
-    loadWorkers();
+    try {
+      const res = await base44.functions.invoke('inviteWorker', {
+        email: form.user_email,
+        appRole: form.role,
+        full_name: form.full_name,
+        phone: form.phone,
+        worker_type: form.worker_type,
+        pay_rate: form.pay_rate,
+      });
+      if (res?.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(`Invited ${form.full_name}`);
+      setDialogOpen(false);
+      setForm({ full_name: '', user_email: '', phone: '', worker_type: 'employee', role: 'worker', pay_rate: '' });
+      loadWorkers();
+    } catch (err) {
+      toast.error('Failed to send invite: ' + (err.message || 'Unknown error'));
+    }
   }
 
   const statusColors = { active: 'bg-success/10 text-success', inactive: 'bg-muted text-muted-foreground', pending: 'bg-warning/10 text-warning' };

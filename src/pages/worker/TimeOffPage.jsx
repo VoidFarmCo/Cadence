@@ -37,23 +37,28 @@ export default function TimeOffPage() {
 
   async function handleSubmit() {
     if (!form.start_date || !form.end_date) { toast.error('Select dates'); return; }
-    const days = differenceInCalendarDays(parseISO(form.end_date), parseISO(form.start_date)) + 1;
-    await base44.entities.LeaveRequest.create({
-      worker_email: user.email,
-      worker_name: user.full_name || profile?.full_name,
-      leave_type: form.leave_type,
-      start_date: form.start_date,
-      end_date: form.end_date,
-      total_days: days,
-      total_hours: days * 8,
-      notes: form.notes,
-      status: 'pending'
-    });
-    toast.success('Leave request submitted');
-    setDialogOpen(false);
-    setForm({ leave_type: 'pto', start_date: '', end_date: '', notes: '' });
-    const reqs = await base44.entities.LeaveRequest.filter({ worker_email: user.email }, '-created_date');
-    setRequests(reqs);
+    if (form.end_date < form.start_date) { toast.error('End date must be after start date'); return; }
+    try {
+      const days = differenceInCalendarDays(parseISO(form.end_date), parseISO(form.start_date)) + 1;
+      await base44.entities.LeaveRequest.create({
+        worker_email: user.email,
+        worker_name: user.full_name || profile?.full_name,
+        leave_type: form.leave_type,
+        start_date: form.start_date,
+        end_date: form.end_date,
+        total_days: days,
+        total_hours: days * 8,
+        notes: form.notes,
+        status: 'pending'
+      });
+      toast.success('Leave request submitted');
+      setDialogOpen(false);
+      setForm({ leave_type: 'pto', start_date: '', end_date: '', notes: '' });
+      const reqs = await base44.entities.LeaveRequest.filter({ worker_email: user.email }, '-created_date');
+      setRequests(reqs);
+    } catch (err) {
+      toast.error('Failed to submit leave request');
+    }
   }
 
   const typeLabels = { pto: 'PTO', sick: 'Sick', unpaid: 'Unpaid' };

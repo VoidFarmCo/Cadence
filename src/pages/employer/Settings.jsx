@@ -26,13 +26,17 @@ export default function Settings() {
   }, []);
 
   async function handleSave() {
-    if (company) {
-      await base44.entities.Company.update(company.id, form);
-      toast.success('Settings saved');
-    } else {
-      const created = await base44.entities.Company.create(form);
-      setCompany(created);
-      toast.success('Company created');
+    try {
+      if (company) {
+        await base44.entities.Company.update(company.id, form);
+        toast.success('Settings saved');
+      } else {
+        const created = await base44.entities.Company.create(form);
+        setCompany(created);
+        toast.success('Company created');
+      }
+    } catch (err) {
+      toast.error('Failed to save settings');
     }
   }
 
@@ -41,19 +45,30 @@ export default function Settings() {
       toast.error('Set a pay period start date first');
       return;
     }
-    const start = parseISO(form.pay_period_start_date);
-    const periods = [];
-    for (let i = 0; i < 6; i++) {
-      const pStart = addDays(start, i * 14);
-      const pEnd = addDays(pStart, 13);
-      periods.push({
-        start_date: format(pStart, 'yyyy-MM-dd'),
-        end_date: format(pEnd, 'yyyy-MM-dd'),
-        status: 'open'
-      });
+    try {
+      const start = parseISO(form.pay_period_start_date);
+      const periods = [];
+      for (let i = 0; i < 6; i++) {
+        const pStart = addDays(start, i * 14);
+        const pEnd = addDays(pStart, 13);
+        periods.push({
+          start_date: format(pStart, 'yyyy-MM-dd'),
+          end_date: format(pEnd, 'yyyy-MM-dd'),
+          status: 'open'
+        });
+      }
+      // bulkCreate may not exist on all SDK versions, fall back to individual creates
+      if (base44.entities.PayPeriod.bulkCreate) {
+        await base44.entities.PayPeriod.bulkCreate(periods);
+      } else {
+        for (const period of periods) {
+          await base44.entities.PayPeriod.create(period);
+        }
+      }
+      toast.success('6 pay periods created');
+    } catch (err) {
+      toast.error('Failed to generate pay periods');
     }
-    await base44.entities.PayPeriod.bulkCreate(periods);
-    toast.success('6 pay periods created');
   }
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" /></div>;

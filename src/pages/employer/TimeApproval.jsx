@@ -39,35 +39,43 @@ export default function TimeApproval() {
   });
 
   async function handleApprove(entry) {
-    const me = await base44.auth.me();
-    await base44.entities.TimeEntry.update(entry.id, { status: 'approved' });
-    await base44.entities.AuditLog.create({
-      action: 'approval',
-      entity_type: 'TimeEntry',
-      entity_id: entry.id,
-      performed_by: me.email,
-      details: `Approved time entry for ${entry.worker_name} on ${entry.date}`
-    });
-    setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'approved' } : e));
-    toast.success('Entry approved');
+    try {
+      const me = await base44.auth.me();
+      await base44.entities.TimeEntry.update(entry.id, { status: 'approved' });
+      await base44.entities.AuditLog.create({
+        action: 'approval',
+        entity_type: 'TimeEntry',
+        entity_id: entry.id,
+        performed_by: me.email,
+        details: `Approved time entry for ${entry.worker_name} on ${entry.date}`
+      });
+      setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'approved' } : e));
+      toast.success('Entry approved');
+    } catch (err) {
+      toast.error('Failed to approve entry');
+    }
   }
 
   async function handleReject(entry) {
     if (!editReason) { toast.error('Reason is required'); return; }
-    const me = await base44.auth.me();
-    await base44.entities.TimeEntry.update(entry.id, { status: 'rejected', edit_reason: editReason });
-    await base44.entities.AuditLog.create({
-      action: 'approval',
-      entity_type: 'TimeEntry',
-      entity_id: entry.id,
-      performed_by: me.email,
-      reason: editReason,
-      details: `Rejected time entry for ${entry.worker_name} on ${entry.date}`
-    });
-    setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'rejected' } : e));
-    setEditDialog(null);
-    setEditReason('');
-    toast.success('Entry rejected');
+    try {
+      const me = await base44.auth.me();
+      await base44.entities.TimeEntry.update(entry.id, { status: 'rejected', edit_reason: editReason });
+      await base44.entities.AuditLog.create({
+        action: 'approval',
+        entity_type: 'TimeEntry',
+        entity_id: entry.id,
+        performed_by: me.email,
+        reason: editReason,
+        details: `Rejected time entry for ${entry.worker_name} on ${entry.date}`
+      });
+      setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'rejected' } : e));
+      setEditDialog(null);
+      setEditReason('');
+      toast.success('Entry rejected');
+    } catch (err) {
+      toast.error('Failed to reject entry');
+    }
   }
 
   const statusColors = {

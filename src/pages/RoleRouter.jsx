@@ -16,23 +16,65 @@ export default function RoleRouter() {
         setIsAuthenticated(authed);
 
         if (authed) {
-          setOnboardingStatus('Setting up your account...');
+          const me = await base44.auth.me();
 
-          // Use backend function to handle onboarding (bypasses RLS)
-          const response = await base44.functions.invoke('onboardNewOwner', {});
-          const result = response.data;
+          // Check if this user already has a WorkerProfile
+          let profiles = [];
+          try {
+            profiles = await base44.entities.WorkerProfile.filter({ user_email: me.email });
+          } catch (e) {
+            console.error('Failed to fetch profiles:', e);
+          }
 
-          if (result.isNew) {
+          if (profiles.length === 0) {
+            // Brand new user with no profile — make them owner and onboard
+            await base44.auth.updateMe({ role: 'admin' });
+            setOnboardingStatus('Setting up your account...');
+
+            const now = new Date();
+            const trialEnd = new Date(now);
+            trialEnd.setDate(trialEnd.getDate() + 30);
+
+            await base44.entities.WorkerProfile.create({
+              user_email: me.email,
+              full_name: me.full_name,
+              worker_type: 'employee',
+              role: 'owner',
+              status: 'active',
+            });
+
+            await base44.entities.Account.create({
+              owner_email: me.email,
+              owner_name: me.full_name,
+              status: 'trial',
+              trial_start: now.toISOString(),
+              trial_end: trialEnd.toISOString(),
+            });
+
             base44.analytics.track({
               eventName: 'new_company_account_created',
               properties: {
-                role: result.role,
-                trialEnd: result.trialEnd,
+                owner_email: me.email,
+                owner_name: me.full_name,
+                trial_start: now.toISOString(),
+                trial_end: trialEnd.toISOString(),
               }
             });
-          }
 
-          setRole(result.role);
+            setRole('owner');
+          } else {
+            // Existing user — use their WorkerProfile role as the source of truth
+            const profileRole = profiles[0].role || 'worker';
+
+            // Sync platform role: employer roles get 'admin', workers get 'user'
+            const isEmployerRole = ['owner', 'manager', 'payroll_admin'].includes(profileRole);
+            const expectedPlatformRole = isEmployerRole ? 'admin' : 'user';
+            if (me.role !== expectedPlatformRole) {
+              await base44.auth.updateMe({ role: expectedPlatformRole });
+            }
+
+            setRole(profileRole);
+          }
         }
       } catch (e) {
         console.error('RoleRouter error:', e);

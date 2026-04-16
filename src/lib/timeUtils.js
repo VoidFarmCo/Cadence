@@ -43,15 +43,27 @@ export function calculateOvertimeForWeek(entries) {
 
 export function formatDate(dateStr) {
   if (!dateStr) return '—';
-  return format(parseISO(dateStr), 'MMM d, yyyy');
+  try {
+    return format(parseISO(dateStr), 'MMM d, yyyy');
+  } catch {
+    return '—';
+  }
 }
 
 export function formatTime(dateStr) {
   if (!dateStr) return '—';
-  return format(parseISO(dateStr), 'h:mm a');
+  try {
+    return format(parseISO(dateStr), 'h:mm a');
+  } catch {
+    return '—';
+  }
 }
 
 export function formatDateTime(dateStr) {
   if (!dateStr) return '—';
-  return format(parseISO(dateStr), 'MMM d, h:mm a');
+  try {
+    return format(parseISO(dateStr), 'MMM d, h:mm a');
+  } catch {
+    return '—';
+  }
 }

@@ -23,7 +23,23 @@ Deno.serve(async (req) => {
       if (!account.trial_start) continue;
 
       const trialStart = new Date(account.trial_start);
-      const daysInTrial = Math.floor((today - trialStart) / (1000 * 60 * 60 * 24));
+      const trialEnd = account.trial_end ? new Date(account.trial_end) : null;
+      const daysInTrial = Math.floor((today.getTime() - trialStart.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Lock expired trials
+      if (trialEnd && today >= trialEnd) {
+        await base44.asServiceRole.entities.Account.update(account.id, {
+          status: 'locked',
+          lock_reason: 'trial_expired',
+        });
+        results.push({
+          account: account.id,
+          email: account.owner_email,
+          reminder: 'trial_expired',
+          locked: true
+        });
+        continue;
+      }
 
       // Send day 25 reminder
       if (daysInTrial === 25 && !account.reminder_25_sent) {

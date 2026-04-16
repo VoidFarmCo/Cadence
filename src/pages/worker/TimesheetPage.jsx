@@ -40,13 +40,17 @@ export default function TimesheetPage() {
   const canSubmit = pendingEntries.length > 0;
 
   async function handleSubmit() {
-    for (const entry of pendingEntries) {
-      await base44.entities.TimeEntry.update(entry.id, { status: 'submitted' });
+    try {
+      for (const entry of pendingEntries) {
+        await base44.entities.TimeEntry.update(entry.id, { status: 'submitted' });
+      }
+      setEntries(prev => prev.map(e =>
+        pendingEntries.find(p => p.id === e.id) ? { ...e, status: 'submitted' } : e
+      ));
+      toast.success('Timesheet submitted for approval');
+    } catch (err) {
+      toast.error('Failed to submit timesheet');
     }
-    setEntries(prev => prev.map(e =>
-      pendingEntries.find(p => p.id === e.id) ? { ...e, status: 'submitted' } : e
-    ));
-    toast.success('Timesheet submitted for approval');
   }
 
   const statusColors = {

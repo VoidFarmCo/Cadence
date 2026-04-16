@@ -61,26 +61,33 @@ export default function ExpensesPage() {
     setForm({ category: 'fuel', amount: '', date: '', notes: '' });
     setReceiptFile(null);
 
-    let receiptUrl;
-    if (receiptFile) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: receiptFile });
-      receiptUrl = file_url;
+    try {
+      let receiptUrl;
+      if (receiptFile) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file: receiptFile });
+        receiptUrl = file_url;
+      }
+      const profiles = await base44.entities.WorkerProfile.filter({ user_email: user.email });
+      const created = await base44.entities.Expense.create({
+        worker_email: user.email,
+        worker_name: user.full_name || profiles[0]?.full_name,
+        category: form.category,
+        amount: parseFloat(form.amount),
+        date: form.date,
+        notes: form.notes,
+        receipt_url: receiptUrl,
+        status: 'pending'
+      });
+      // Replace optimistic entry with real one
+      setExpenses(prev => prev.map(e => e.id === optimisticId ? created : e));
+      toast.success('Expense added');
+    } catch (err) {
+      // Rollback optimistic update
+      setExpenses(prev => prev.filter(e => e.id !== optimisticId));
+      toast.error('Failed to add expense');
+    } finally {
+      setSubmitting(false);
     }
-    const profiles = await base44.entities.WorkerProfile.filter({ user_email: user.email });
-    const created = await base44.entities.Expense.create({
-      worker_email: user.email,
-      worker_name: user.full_name || profiles[0]?.full_name,
-      category: form.category,
-      amount: parseFloat(form.amount),
-      date: form.date,
-      notes: form.notes,
-      receipt_url: receiptUrl,
-      status: 'pending'
-    });
-    // Replace optimistic entry with real one
-    setExpenses(prev => prev.map(e => e.id === optimisticId ? created : e));
-    toast.success('Expense added');
-    setSubmitting(false);
   }
 
   const total = expenses.reduce((s, e) => s + (e.amount || 0), 0);

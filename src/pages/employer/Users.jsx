@@ -35,8 +35,7 @@ export default function Users() {
   const stats = {
     total: users.length,
     admins: users.filter(u => u.role === 'admin').length,
-    owners: users.filter(u => u.role === 'owner').length,
-    workers: users.filter(u => ['worker', 'manager', 'payroll_admin'].includes(u.role)).length,
+    users: users.filter(u => u.role === 'user').length,
   };
 
   return (
@@ -47,7 +46,7 @@ export default function Users() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -68,20 +67,11 @@ export default function Users() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Owners</CardTitle>
+            <CardTitle className="text-sm font-medium">Regular Users</CardTitle>
             <UserCheck className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.owners}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Workers</CardTitle>
-            <UserCheck className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.workers}</div>
+            <div className="text-2xl font-bold">{stats.users}</div>
           </CardContent>
         </Card>
       </div>

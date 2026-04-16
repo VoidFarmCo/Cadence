@@ -29,18 +29,22 @@ export default function Sites() {
       toast.error('Name and coordinates are required');
       return;
     }
-    await base44.entities.Site.create({
-      name: form.name,
-      latitude: parseFloat(form.latitude),
-      longitude: parseFloat(form.longitude),
-      radius_meters: parseInt(form.radius_meters) || 200,
-      address: form.address,
-      status: 'active'
-    });
-    toast.success(`Site "${form.name}" created`);
-    setDialogOpen(false);
-    setForm({ name: '', latitude: '', longitude: '', radius_meters: '200', address: '' });
-    loadSites();
+    try {
+      await base44.entities.Site.create({
+        name: form.name,
+        latitude: parseFloat(form.latitude),
+        longitude: parseFloat(form.longitude),
+        radius_meters: parseInt(form.radius_meters) || 200,
+        address: form.address,
+        status: 'active'
+      });
+      toast.success(`Site "${form.name}" created`);
+      setDialogOpen(false);
+      setForm({ name: '', latitude: '', longitude: '', radius_meters: '200', address: '' });
+      loadSites();
+    } catch (err) {
+      toast.error('Failed to create site');
+    }
   }
 
   async function handleSaveRadius(siteId, radius) {
