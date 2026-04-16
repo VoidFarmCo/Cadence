@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
+import api from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 export default function Login() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState('login'); // 'login' | 'register'
+  const [mode, setMode] = useState('login'); // 'login' | 'register' | 'forgot'
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
@@ -20,8 +22,15 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setInfo('');
     setLoading(true);
     try {
+      if (mode === 'forgot') {
+        await api.post('/api/auth/forgot-password', { email: form.email });
+        setInfo('If that email is registered, a reset link has been sent.');
+        setLoading(false);
+        return;
+      }
       if (mode === 'login') {
         await login(form.email, form.password);
       } else {
@@ -54,12 +63,14 @@ export default function Login() {
 
         <Card className="p-8">
           <h1 className="text-2xl font-bold mb-1">
-            {mode === 'login' ? 'Welcome back' : 'Create your account'}
+            {mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Create your account' : 'Reset your password'}
           </h1>
           <p className="text-sm text-muted-foreground mb-6">
             {mode === 'login'
               ? 'Sign in to your Cadence account'
-              : 'Start your 30-day free trial'}
+              : mode === 'register'
+              ? 'Start your 30-day free trial'
+              : "Enter your email and we'll send a reset link"}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -105,37 +116,83 @@ export default function Login() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Password</label>
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={mode === 'register' ? 8 : 1}
-                value={form.password}
-                onChange={handleChange}
-                className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder={mode === 'register' ? 'Min 8 characters' : '••••••••'}
-              />
-            </div>
+            {mode !== 'forgot' && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium">Password</label>
+                  {mode === 'login' && (
+                    <button
+                      type="button"
+                      onClick={() => { setMode('forgot'); setError(''); setInfo(''); }}
+                      className="text-xs text-muted-foreground hover:text-primary"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <input
+                  name="password"
+                  type="password"
+                  required
+                  minLength={mode === 'register' ? 8 : 1}
+                  value={form.password}
+                  onChange={handleChange}
+                  className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder={mode === 'register' ? 'Min 8 characters' : '••••••••'}
+                />
+              </div>
+            )}
 
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
+            {info && (
+              <p className="text-sm text-green-600">{info}</p>
+            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+              {loading
+                ? 'Please wait...'
+                : mode === 'login'
+                ? 'Sign In'
+                : mode === 'register'
+                ? 'Create Account'
+                : 'Send Reset Link'}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
-            {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-            <button
-              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
-              className="text-primary font-medium hover:underline"
-            >
-              {mode === 'login' ? 'Sign up free' : 'Sign in'}
-            </button>
+            {mode === 'forgot' ? (
+              <>
+                Remember it?{' '}
+                <button
+                  onClick={() => { setMode('login'); setError(''); setInfo(''); }}
+                  className="text-primary font-medium hover:underline"
+                >
+                  Sign in
+                </button>
+              </>
+            ) : mode === 'login' ? (
+              <>
+                Don&apos;t have an account?{' '}
+                <button
+                  onClick={() => { setMode('register'); setError(''); setInfo(''); }}
+                  className="text-primary font-medium hover:underline"
+                >
+                  Sign up free
+                </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{' '}
+                <button
+                  onClick={() => { setMode('login'); setError(''); setInfo(''); }}
+                  className="text-primary font-medium hover:underline"
+                >
+                  Sign in
+                </button>
+              </>
+            )}
           </p>
         </Card>
       </div>

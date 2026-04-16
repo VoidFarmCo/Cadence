@@ -48,11 +48,8 @@ export default function People() {
     try {
       const res = await api.post('/api/auth/invite', {
         email: form.user_email,
-        appRole: form.role,
+        role: form.role,
         full_name: form.full_name,
-        phone: form.phone,
-        worker_type: form.worker_type,
-        pay_rate: form.pay_rate,
       }).then(r => r.data);
       if (res?.error) {
         toast.error(res.error);
