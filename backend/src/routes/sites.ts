@@ -13,6 +13,10 @@ const router = Router();
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const companyId = await getCompanyId(req.user!.email);
+    if (!companyId) {
+      res.json([]);
+      return;
+    }
     const sites = await prisma.site.findMany({
       where: { company_id: companyId },
       orderBy: { name: 'asc' },

@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
@@ -72,10 +74,32 @@ io.on('connection', (socket) => {
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
 
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false, // API only — no HTML served
+}));
+
 app.use(cors({
   origin: ALLOWED_ORIGINS,
   credentials: true,
 }));
+
+// Rate limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
+});
+
+const strictLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
+});
 
 // Stripe webhook needs raw body — mount before json parser
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
@@ -97,6 +121,10 @@ app.get('/api/health', (_req, res) => {
 
 // ─── Routes ─────────────────────────────────────────────────────────────────
 
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', strictLimiter);
+app.use('/api/auth/reset-password', strictLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/api/companies', companyRoutes);

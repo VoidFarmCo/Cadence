@@ -15,6 +15,10 @@ router.get('/', authenticate, requireMinRole('manager'), async (req: AuthRequest
   try {
     const status = qs(req.query.status);
     const companyId = await getCompanyId(req.user!.email);
+    if (!companyId) {
+      res.json([]);
+      return;
+    }
     const where: any = { company_id: companyId };
     if (status) where.status = status;
 

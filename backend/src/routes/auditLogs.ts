@@ -3,8 +3,18 @@ import prisma from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { AuthRequest, qs } from '../types';
+import { getCompanyWorkerEmails } from '../lib/company';
 
 const router = Router();
+
+async function getCompanyUserIds(userEmail: string): Promise<string[]> {
+  const companyEmails = await getCompanyWorkerEmails(userEmail);
+  const users = await prisma.user.findMany({
+    where: { email: { in: companyEmails } },
+    select: { id: true },
+  });
+  return users.map((u: { id: string }) => u.id);
+}
 
 // List audit logs
 router.get(
@@ -19,11 +29,16 @@ router.get(
       const action = qs(req.query.action);
       const start_date = qs(req.query.start_date);
       const end_date = qs(req.query.end_date);
-      const where: any = {};
+
+      const companyUserIds = await getCompanyUserIds(req.user!.email);
+      const where: any = { performed_by: { in: companyUserIds } };
 
       if (entity_type) where.entity_type = entity_type;
       if (entity_id) where.entity_id = entity_id;
-      if (performed_by) where.performed_by = performed_by;
+      if (performed_by) {
+        // Only allow filtering to a user within the company
+        where.performed_by = companyUserIds.includes(performed_by) ? performed_by : '__none__';
+      }
       if (action) where.action = action;
       if (start_date || end_date) {
         where.created_at = {};
@@ -71,6 +86,8 @@ router.get(
   requireMinRole('manager'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyUserIds = await getCompanyUserIds(req.user!.email);
+
       const log = await prisma.auditLog.findUnique({
         where: { id: req.params.id },
         include: {
@@ -83,6 +100,12 @@ router.get(
         res.status(404).json({ error: 'Audit log not found' });
         return;
       }
+
+      if (!companyUserIds.includes(log.performed_by)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+
       res.json(log);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch audit log' });

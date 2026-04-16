@@ -6,6 +6,7 @@ import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
 import { createAuditLog } from '../services/audit.service';
+import { getCompanyId } from '../lib/company';
 import {
   finalizePayPeriodAndStartPayroll,
   submitPayrollRun,
@@ -23,7 +24,8 @@ router.get(
     try {
       const status = qs(req.query.status);
       const pay_period_id = qs(req.query.pay_period_id);
-      const where: any = {};
+      const companyId = await getCompanyId(req.user!.email);
+      const where: any = { payPeriod: { company_id: companyId } };
       if (status) where.status = status;
       if (pay_period_id) where.pay_period_id = pay_period_id;
 
@@ -46,12 +48,17 @@ router.get(
   requireRole('owner', 'payroll_admin'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
       const run = await prisma.payrollRun.findUnique({
         where: { id: req.params.id },
         include: { payPeriod: true },
       });
       if (!run) {
         res.status(404).json({ error: 'Payroll run not found' });
+        return;
+      }
+      if (run.payPeriod.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
       res.json(run);

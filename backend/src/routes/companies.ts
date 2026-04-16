@@ -6,13 +6,19 @@ import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest } from '../types';
 import { createAuditLog } from '../services/audit.service';
+import { getCompanyId } from '../lib/company';
 
 const router = Router();
 
-// Get company (first company — single-tenant)
-router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
+// Get user's company
+router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const company = await prisma.company.findFirst();
+    const companyId = await getCompanyId(req.user!.email);
+    if (!companyId) {
+      res.status(404).json({ error: 'Company not found' });
+      return;
+    }
+    const company = await prisma.company.findUnique({ where: { id: companyId } });
     if (!company) {
       res.status(404).json({ error: 'Company not found' });
       return;
@@ -44,7 +50,12 @@ router.put(
   validate(updateCompanySchema),
   async (req: AuthRequest, res: Response) => {
     try {
-      const company = await prisma.company.findFirst();
+      const companyId = await getCompanyId(req.user!.email);
+      if (!companyId) {
+        res.status(404).json({ error: 'Company not found' });
+        return;
+      }
+      const company = await prisma.company.findUnique({ where: { id: companyId } });
       if (!company) {
         res.status(404).json({ error: 'Company not found' });
         return;

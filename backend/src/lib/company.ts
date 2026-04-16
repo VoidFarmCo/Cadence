@@ -24,5 +24,5 @@ export async function getCompanyWorkerEmails(userEmail: string): Promise<string[
     where: { company_id: companyId },
     select: { user_email: true },
   });
-  return profiles.map(p => p.user_email);
+  return profiles.map((p: { user_email: string }) => p.user_email);
 }

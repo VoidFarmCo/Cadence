@@ -16,6 +16,10 @@ router.get('/', authenticate, requireMinRole('manager'), async (req: AuthRequest
     const status = qs(req.query.status);
     const worker_type = qs(req.query.worker_type);
     const companyId = await getCompanyId(req.user!.email);
+    if (!companyId) {
+      res.json([]);
+      return;
+    }
     const where: any = { company_id: companyId };
     if (status) where.status = status;
     if (worker_type) where.worker_type = worker_type;

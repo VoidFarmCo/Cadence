@@ -18,6 +18,10 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const where: any = {};
 
     const companyId = await getCompanyId(req.user!.email);
+    if (!companyId) {
+      res.json([]);
+      return;
+    }
     where.company_id = companyId;
     if (req.user!.role === 'worker') {
       where.OR = [

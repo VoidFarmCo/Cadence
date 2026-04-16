@@ -25,12 +25,9 @@ router.get('/', authenticate, requireRole('owner'), async (req: AuthRequest, res
   }
 });
 
-// Update account
+// Update account (plan/billing_interval are managed by Stripe webhooks only)
 const updateAccountSchema = z.object({
   owner_name: z.string().min(1).optional(),
-  plan: z.enum(['solo', 'pro', 'business', 'enterprise']).optional(),
-  billing_interval: z.enum(['month', 'year']).optional(),
-  user_limit: z.number().int().positive().optional(),
 }).strict();
 
 router.put(
