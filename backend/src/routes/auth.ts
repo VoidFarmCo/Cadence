@@ -47,24 +47,29 @@ function clearLoginRateLimit(identifier: string): void {
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 
+// Cross-domain deployments (frontend on Vercel, backend on Railway) require
+// SameSite=None; Secure so the browser actually sends cookies cross-site.
+const COOKIE_SAME_SITE = IS_PROD ? 'none' : 'lax';
+
 function setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: 'strict',
+    sameSite: COOKIE_SAME_SITE,
     maxAge: 15 * 60 * 1000, // 15 minutes
   });
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: 'strict',
+    sameSite: COOKIE_SAME_SITE,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 }
 
 function clearAuthCookies(res: Response): void {
-  res.clearCookie('accessToken');
-  res.clearCookie('refreshToken');
+  const opts = { httpOnly: true, secure: IS_PROD, sameSite: COOKIE_SAME_SITE };
+  res.clearCookie('accessToken', opts);
+  res.clearCookie('refreshToken', opts);
 }
 
 // ─── Register (create account + company + owner) ────────────────────────────
