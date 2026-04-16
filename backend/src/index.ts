@@ -28,6 +28,7 @@ import workerDocumentRoutes from './routes/workerDocuments';
 import auditLogRoutes from './routes/auditLogs';
 import stripeRoutes from './routes/stripe';
 import reportRoutes from './routes/reports';
+import { processTrialReminders } from './services/trial.service';
 
 const app = express();
 const server = createServer(app);
@@ -118,6 +119,19 @@ app.use('/api/reports', reportRoutes);
 // ─── Error Handler (must be last) ──────────────────────────────────────────
 
 app.use(errorHandler);
+
+// ─── Trial Reminder Cron (runs every 6 hours) ────────────────────────────────
+
+setInterval(async () => {
+  try {
+    const result = await processTrialReminders();
+    if (result.reminded > 0 || result.locked > 0) {
+      console.log(`Trial cron: ${result.reminded} reminded, ${result.locked} locked`);
+    }
+  } catch (err) {
+    console.error('Trial cron error:', err);
+  }
+}, 6 * 60 * 60 * 1000); // every 6 hours
 
 // ─── Start Server ───────────────────────────────────────────────────────────
 

@@ -33,6 +33,7 @@ enum AccountPlan {
   solo
   pro
   business
+  business_pro
   enterprise
 }
 
