@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, MapPin, ClipboardCheck, CalendarOff, DollarSign, BarChart3, Settings, LogOut, FileText, Map, CalendarDays, CreditCard, PieChart, UserCheck } from 'lucide-react';
+import { LayoutDashboard, Users, MapPin, ClipboardCheck, CalendarOff, DollarSign, BarChart3, Settings, LogOut, FileText, Map, CalendarDays, CreditCard, PieChart, UserCheck, Shield } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +23,7 @@ const navItems = [
 export default function EmployerSidebar({ user }) {
   const { pathname } = useLocation();
   const { logout } = useAuth();
+  const isSuperAdmin = user?.platform_role === 'superadmin' || user?.is_platform_admin;
 
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
@@ -37,6 +38,20 @@ export default function EmployerSidebar({ user }) {
       </div>
 
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+        {isSuperAdmin && (
+          <Link
+            to="/admin"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 mb-2",
+              pathname.startsWith('/admin')
+                ? "bg-purple-500/10 text-purple-600"
+                : "text-purple-500/70 hover:bg-purple-500/10 hover:text-purple-600"
+            )}
+          >
+            <Shield className="w-[18px] h-[18px]" />
+            <span>Platform Admin</span>
+          </Link>
+        )}
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = path === '/' ? pathname === '/' : pathname.startsWith(path);
           return (

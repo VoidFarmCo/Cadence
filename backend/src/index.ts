@@ -32,6 +32,7 @@ import stripeRoutes from './routes/stripe';
 import reportRoutes from './routes/reports';
 import adminRoutes from './routes/admin';
 import { processTrialReminders } from './services/trial.service';
+import { promoteSuperAdmin } from './services/superadmin.service';
 
 const app = express();
 const server = createServer(app);
@@ -179,9 +180,12 @@ setInterval(async () => {
 
 const PORT = parseInt(env.PORT, 10);
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log(`Cadence API running on port ${PORT}`);
   console.log(`Environment: ${env.NODE_ENV}`);
+
+  // Auto-promote superadmin user on startup if SUPERADMIN_EMAIL is set
+  await promoteSuperAdmin();
 });
 
 export default app;

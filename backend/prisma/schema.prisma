@@ -16,6 +16,11 @@ enum UserRole {
   worker
 }
 
+enum PlatformRole {
+  user
+  superadmin
+}
+
 enum UserStatus {
   active
   inactive
@@ -207,17 +212,18 @@ enum AuditAction {
 // ─── Models ─────────────────────────────────────────────────────────────────
 
 model User {
-  id            String     @id @default(uuid())
-  email         String     @unique
+  id            String       @id @default(uuid())
+  email         String       @unique
   password_hash String
   full_name     String
-  role          UserRole   @default(worker)
-  status        UserStatus @default(pending)
+  role          UserRole     @default(worker)
+  platform_role PlatformRole @default(user)
+  status        UserStatus   @default(pending)
   invite_token  String?
   reset_token   String?
   reset_token_exp DateTime?
-  created_at    DateTime   @default(now())
-  updated_at    DateTime   @updatedAt
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
 
   auditLogs AuditLog[] @relation("AuditPerformer")
 

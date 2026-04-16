@@ -29,6 +29,7 @@ export default function useCurrentUser() {
   const isManager = workerRole === 'manager' || isPayrollAdmin;
   const isWorker = workerRole === 'worker';
   const isContractor = profile?.worker_type === 'contractor';
+  const isSuperAdmin = user?.platform_role === 'superadmin' || user?.is_platform_admin === true;
 
-  return { user, profile, loading, isEmployer, isOwner, isPayrollAdmin, isManager, isWorker, isContractor };
+  return { user, profile, loading, isEmployer, isOwner, isPayrollAdmin, isManager, isWorker, isContractor, isSuperAdmin };
 }

@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import SuperAdminRoute from '@/components/SuperAdminRoute';
 
 import RoleRouter from './pages/RoleRouter';
 import Login from './pages/Login';
@@ -62,7 +63,9 @@ const AuthenticatedApp = () => {
       {/* Protected routes — require authentication */}
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<RoleRouter />} />
-        <Route path="/admin" element={<AdminDashboard />} />
+        <Route element={<SuperAdminRoute />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+        </Route>
         <Route path="/app-preview" element={<AppPreview />} />
 
         {/* Employer Routes */}

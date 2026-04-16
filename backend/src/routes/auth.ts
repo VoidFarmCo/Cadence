@@ -95,7 +95,7 @@ router.post('/register', validate(registerSchema), async (req: AuthRequest, res:
 
     const { user, account, company } = await registerOwner(email, password, full_name, company_name);
 
-    const payload = { userId: user.id, email: user.email, role: user.role };
+    const payload = { userId: user.id, email: user.email, role: user.role, platform_role: user.platform_role };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
@@ -112,7 +112,7 @@ router.post('/register', validate(registerSchema), async (req: AuthRequest, res:
 
     setAuthCookies(res, accessToken, refreshToken);
     res.status(201).json({
-      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
+      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, platform_role: user.platform_role },
       account,
       company,
     });
@@ -189,7 +189,7 @@ router.post('/login', validate(loginSchema), async (req: AuthRequest, res: Respo
 
     clearLoginRateLimit(identifier);
 
-    const payload = { userId: user.id, email: user.email, role: user.role };
+    const payload = { userId: user.id, email: user.email, role: user.role, platform_role: user.platform_role };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
@@ -202,7 +202,14 @@ router.post('/login', validate(loginSchema), async (req: AuthRequest, res: Respo
 
     setAuthCookies(res, accessToken, refreshToken);
     res.json({
-      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
+      user: {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        platform_role: user.platform_role,
+        is_platform_admin: user.platform_role === 'superadmin',
+      },
     });
   } catch (error) {
     res.status(500).json({ error: 'Login failed' });
@@ -227,7 +234,7 @@ router.post('/refresh', async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const payload = { userId: user.id, email: user.email, role: user.role };
+    const payload = { userId: user.id, email: user.email, role: user.role, platform_role: user.platform_role };
     const accessToken = generateAccessToken(payload);
     const newRefreshToken = generateRefreshToken(payload);
 
@@ -244,7 +251,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { id: true, email: true, full_name: true, role: true, status: true, created_at: true },
+      select: { id: true, email: true, full_name: true, role: true, platform_role: true, status: true, created_at: true },
     });
     if (!user) {
       res.status(404).json({ error: 'User not found' });
@@ -255,7 +262,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
       where: { user_email: user.email },
     });
 
-    res.json({ ...user, workerProfile: profile });
+    res.json({ ...user, is_platform_admin: user.platform_role === 'superadmin', workerProfile: profile });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch user' });
   }
@@ -334,13 +341,13 @@ router.post('/accept-invite', validate(acceptInviteSchema), async (req: AuthRequ
     const { token, password } = req.body;
     const user = await acceptInvite(token, password);
 
-    const payload = { userId: user.id, email: user.email, role: user.role };
+    const payload = { userId: user.id, email: user.email, role: user.role, platform_role: user.platform_role };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
     setAuthCookies(res, accessToken, refreshToken);
     res.json({
-      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
+      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, platform_role: user.platform_role },
     });
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Failed to accept invite' });
