@@ -12,15 +12,14 @@ export default function Login() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    email: '', password: '', full_name: '', company_name: '',
+  });
 
   // Redirect to home if already logged in
   if (!isLoadingAuth && isAuthenticated) {
     return <Navigate to="/" replace />;
   }
-
-  const [form, setForm] = useState({
-    email: '', password: '', full_name: '', company_name: '',
-  });
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 

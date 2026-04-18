@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { WorkerProfiles, Punches, LeaveRequests, PayPeriods } from '@/api/entities';
 import { getSocket } from '@/lib/socket';
-import { Users, Clock, CalendarOff, DollarSign, AlertTriangle, CheckCircle2, Timer } from 'lucide-react';
+import { Users, Clock, CalendarOff, DollarSign } from 'lucide-react';
 import StatsCard from '@/components/dashboard/StatsCard';
-import { formatHours, formatDate } from '@/lib/timeUtils';
+import { formatDate } from '@/lib/timeUtils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';

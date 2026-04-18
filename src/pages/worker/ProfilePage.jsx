@@ -25,9 +25,9 @@ export default function ProfilePage() {
     async function load() {
       const me = await api.get('/api/auth/me').then(r => r.data);
       setUser(me);
-      const profiles = await WorkerProfiles.list({ user_email: me.email });
-      setProfile(profiles[0]);
-      if (profiles[0]) setInfoForm({ full_name: profiles[0].full_name || '', phone: profiles[0].phone || '' });
+      const p = me?.workerProfile || null;
+      setProfile(p);
+      if (p) setInfoForm({ full_name: p.full_name || '', phone: p.phone || '' });
       setLoading(false);
     }
     load();

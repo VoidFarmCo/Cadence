@@ -38,7 +38,6 @@ export default function PullToRefresh({ onRefresh, children }) {
   }, [pullY, onRefresh]);
 
   const progress = Math.min(pullY / THRESHOLD, 1);
-  const triggered = pullY >= THRESHOLD;
 
   return (
     <div

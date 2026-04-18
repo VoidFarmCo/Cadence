@@ -6,7 +6,7 @@ import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { AuthRequest } from '../types';
 import { createAuditLog } from '../services/audit.service';
-import { sendInviteEmail, sendPasswordResetEmail } from '../services/email.service';
+import { sendInviteEmail, sendPasswordResetEmail, buildInviteUrl, isEmailConfigured } from '../services/email.service';
 import {
   hashPassword,
   comparePassword,
@@ -320,17 +320,24 @@ router.post(
         companyId
       );
 
-      try {
-        await sendInviteEmail(email, full_name, inviteToken);
-      } catch (emailError) {
-        console.error('Failed to send invite email:', emailError);
-        // User was created but email failed — report partial success so caller can retry
-        res.status(201).json({
-          message: 'User created but invite email failed to send',
-          userId: user.id,
-          emailError: 'SMTP delivery failed. Check email configuration.',
-        });
-        return;
+      const inviteUrl = buildInviteUrl(inviteToken);
+      let emailSent = false;
+      let emailError: string | undefined;
+
+      if (!isEmailConfigured()) {
+        emailError =
+          'Email is not configured on the server. Copy the invite link below and share it with the user.';
+      } else {
+        try {
+          await sendInviteEmail(email, full_name, inviteToken);
+          emailSent = true;
+        } catch (err: any) {
+          console.error('Failed to send invite email:', err);
+          emailError =
+            err?.message
+              ? `Failed to send invite email: ${err.message}. Copy the invite link below and share it manually.`
+              : 'Failed to send invite email. Copy the invite link below and share it manually.';
+        }
       }
 
       await createAuditLog({
@@ -338,10 +345,16 @@ router.post(
         entityType: 'user',
         entityId: user.id,
         performedBy: req.user!.userId,
-        details: `Invited ${email} as ${role}`,
+        details: `Invited ${email} as ${role}${emailSent ? '' : ' (email delivery failed)'}`,
       });
 
-      res.status(201).json({ message: 'Invite sent', userId: user.id });
+      res.status(201).json({
+        message: emailSent ? 'Invite sent' : 'User created but invite email failed to send',
+        userId: user.id,
+        emailSent,
+        inviteUrl,
+        ...(emailError ? { emailError } : {}),
+      });
     } catch (error) {
       console.error('Failed to send invite:', error);
       res.status(500).json({ error: 'Failed to send invite' });

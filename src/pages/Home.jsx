@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CheckCircle2, Clock, FileText, DollarSign, Users, MapPin, ArrowRight, Star } from 'lucide-react';
+import { CheckCircle2, Clock, FileText, DollarSign, Users, MapPin, ArrowRight } from 'lucide-react';
 
 export default function Home() {
   const navigate = useNavigate();

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '@/api/apiClient';
-import { LeaveRequests, WorkerProfiles } from '@/api/entities';
+import { LeaveRequests } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -25,12 +25,9 @@ export default function TimeOffPage() {
     async function load() {
       const me = await api.get('/api/auth/me').then(r => r.data);
       setUser(me);
-      const [reqs, profiles] = await Promise.all([
-        LeaveRequests.list({ worker_email: me.email, sort: '-created_date' }),
-        WorkerProfiles.list({ user_email: me.email }),
-      ]);
+      const reqs = await LeaveRequests.list({ worker_email: me.email, sort: '-created_date' });
       setRequests(reqs);
-      setProfile(profiles[0]);
+      setProfile(me?.workerProfile || null);
       setLoading(false);
     }
     load();
@@ -57,7 +54,7 @@ export default function TimeOffPage() {
       setForm({ leave_type: 'pto', start_date: '', end_date: '', notes: '' });
       const reqs = await LeaveRequests.list({ worker_email: user.email, sort: '-created_date' });
       setRequests(reqs);
-    } catch (err) {
+    } catch {
       toast.error('Failed to submit leave request');
     }
   }

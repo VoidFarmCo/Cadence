@@ -4,7 +4,7 @@ import { TimeEntries } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Send, MapPin } from 'lucide-react';
-import { formatHours, formatTime, formatDate, getWeekRange } from '@/lib/timeUtils';
+import { formatHours, formatTime } from '@/lib/timeUtils';
 import { format, addDays, subDays, startOfWeek, parseISO, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -12,12 +12,10 @@ export default function TimesheetPage() {
   const [entries, setEntries] = useState([]);
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
 
   useEffect(() => {
     async function load() {
       const me = await api.get('/api/auth/me').then(r => r.data);
-      setUser(me);
       const allEntries = await TimeEntries.list({ worker_email: me.email, sort: '-date', limit: 50 });
       setEntries(allEntries);
       setLoading(false);
@@ -49,7 +47,7 @@ export default function TimesheetPage() {
         pendingEntries.find(p => p.id === e.id) ? { ...e, status: 'submitted' } : e
       ));
       toast.success('Timesheet submitted for approval');
-    } catch (err) {
+    } catch {
       toast.error('Failed to submit timesheet');
     }
   }

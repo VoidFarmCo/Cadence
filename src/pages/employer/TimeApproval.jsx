@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Check, X, Clock, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
-import { formatDate, formatTime, formatHours } from '@/lib/timeUtils';
+import { Check, X, AlertTriangle } from 'lucide-react';
+import { formatDate, formatHours } from '@/lib/timeUtils';
 import { toast } from 'sonner';
 
 export default function TimeApproval() {
@@ -43,7 +43,7 @@ export default function TimeApproval() {
       await TimeEntries.update(entry.id, { status: 'approved' });
       setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'approved' } : e));
       toast.success('Entry approved');
-    } catch (err) {
+    } catch {
       toast.error('Failed to approve entry');
     }
   }
@@ -56,7 +56,7 @@ export default function TimeApproval() {
       setEditDialog(null);
       setEditReason('');
       toast.success('Entry rejected');
-    } catch (err) {
+    } catch {
       toast.error('Failed to reject entry');
     }
   }

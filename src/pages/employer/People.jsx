@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import PullToRefresh from '@/components/PullToRefresh';
 import api from '@/api/apiClient';
 import { WorkerProfiles } from '@/api/entities';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { UserPlus, Search } from 'lucide-react';
+import { UserPlus, Search, Copy, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import WorkerDetailModal from '@/components/documents/WorkerDetailModal';
 
@@ -19,6 +19,11 @@ export default function People() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [form, setForm] = useState({ full_name: '', user_email: '', phone: '', worker_type: 'employee', role: 'worker', pay_rate: '' });
+  // Populated when the backend creates the user but the invite email fails
+  // (e.g. SMTP not configured). Shows the accept-invite link so the admin
+  // can copy and share it manually.
+  const [emailFallback, setEmailFallback] = useState(null); // { fullName, email, inviteUrl, reason }
+  const [submittingInvite, setSubmittingInvite] = useState(false);
 
   useEffect(() => {
     loadWorkers();
@@ -28,7 +33,7 @@ export default function People() {
     try {
       const w = await WorkerProfiles.list({ sort: '-created_date' });
       setWorkers(w);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load workers');
     } finally {
       setLoading(false);
@@ -45,22 +50,48 @@ export default function People() {
       toast.error('Name and email are required');
       return;
     }
+    setSubmittingInvite(true);
     try {
       const res = await api.post('/api/auth/invite', {
         email: form.user_email,
         role: form.role,
         full_name: form.full_name,
       }).then(r => r.data);
-      if (res?.error) {
-        toast.error(res.error);
-        return;
-      }
-      toast.success(`Invited ${form.full_name}`);
+
+      const invitedName = form.full_name;
+      const invitedEmail = form.user_email;
       setDialogOpen(false);
       setForm({ full_name: '', user_email: '', phone: '', worker_type: 'employee', role: 'worker', pay_rate: '' });
       loadWorkers();
+
+      if (res?.emailSent) {
+        toast.success(`Invite emailed to ${invitedEmail}`);
+      } else if (res?.inviteUrl) {
+        // Email failed or SMTP is not configured; surface the link so the
+        // admin can still deliver the invite manually.
+        setEmailFallback({
+          fullName: invitedName,
+          email: invitedEmail,
+          inviteUrl: res.inviteUrl,
+          reason: res.emailError || 'Email delivery failed.',
+        });
+      } else {
+        toast.success(`Invited ${invitedName}`);
+      }
     } catch (err) {
-      toast.error('Failed to send invite: ' + (err.message || 'Unknown error'));
+      const msg = err?.response?.data?.error || err?.message || 'Unknown error';
+      toast.error('Failed to send invite: ' + msg);
+    } finally {
+      setSubmittingInvite(false);
+    }
+  }
+
+  async function copyInviteLink(url) {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Invite link copied to clipboard');
+    } catch {
+      toast.error('Could not copy. Select and copy the link manually.');
     }
   }
 
@@ -131,7 +162,9 @@ export default function People() {
                 <Label>Pay Rate ($/hr)</Label>
                 <Input type="number" value={form.pay_rate} onChange={e => setForm({ ...form, pay_rate: e.target.value })} placeholder="15.00" />
               </div>
-              <Button onClick={handleInvite} className="w-full">Send Invite</Button>
+              <Button onClick={handleInvite} disabled={submittingInvite} className="w-full">
+                {submittingInvite ? 'Sending...' : 'Send Invite'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -201,6 +234,37 @@ export default function People() {
         onDeleted={() => { setSelectedWorker(null); loadWorkers(); }}
         onUpdated={() => { setSelectedWorker(null); loadWorkers(); }}
       />
+
+      <Dialog open={!!emailFallback} onOpenChange={(open) => !open && setEmailFallback(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-warning" />
+              Invite created, but email was not sent
+            </DialogTitle>
+            <DialogDescription>
+              {emailFallback?.reason}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-muted-foreground">
+              The account for <strong>{emailFallback?.fullName}</strong>{' '}
+              (<span className="font-mono">{emailFallback?.email}</span>) was created. Share the
+              link below so they can set their password and join your team. The link expires in 7 days.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input readOnly value={emailFallback?.inviteUrl || ''} className="font-mono text-xs" />
+              <Button type="button" variant="outline" onClick={() => copyInviteLink(emailFallback.inviteUrl)}>
+                <Copy className="w-4 h-4 mr-2" />
+                Copy
+              </Button>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={() => setEmailFallback(null)}>Done</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
     </PullToRefresh>
   );

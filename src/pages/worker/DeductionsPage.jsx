@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '@/api/apiClient';
-import { TaxDeductions, WorkerProfiles } from '@/api/entities';
+import { TaxDeductions } from '@/api/entities';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { TrendingUp, Plus, Car, Home, Wrench, Phone, Utensils, Heart, PiggyBank, DollarSign } from 'lucide-react';
+import { Plus, Car, Home, Wrench, Phone, Utensils, Heart, PiggyBank, DollarSign } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -54,14 +53,13 @@ export default function DeductionsPage() {
   async function handleAdd() {
     setSaving(true);
     try {
-      const profiles = await WorkerProfiles.list({ user_email: user.email });
       let amount = parseFloat(draft.amount) || 0;
       if (draft.category === 'mileage' && draft.miles) {
         amount = parseFloat(draft.miles) * 0.67;
       }
       await TaxDeductions.create({
         worker_email: user.email,
-        worker_name: profiles[0]?.full_name || user.full_name || user.email,
+        worker_name: user?.workerProfile?.full_name || user.full_name || user.email,
         tax_year: parseInt(yearFilter),
         category: draft.category,
         description: draft.description,

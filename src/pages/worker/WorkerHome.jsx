@@ -1,19 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '@/api/apiClient';
-import { WorkerProfiles, TimeEntries, TaxForms, LeaveRequests, Shifts, Punches } from '@/api/entities';
+import { TimeEntries, TaxForms, LeaveRequests, Shifts, Punches } from '@/api/entities';
 import PullToRefresh from '@/components/PullToRefresh';
 import { Clock, CalendarDays, CalendarOff, FileText, Receipt, TrendingUp, ChevronRight, AlertCircle } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { formatHours } from '@/lib/timeUtils';
 import WorkerMessages from '@/components/messaging/WorkerMessages';
 
-async function fetchData(email) {
+async function fetchData(email, profile) {
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 0 });
-  const [profiles, entries, forms, leaves, shifts, punches] = await Promise.all([
-    WorkerProfiles.list({ user_email: email }),
+  const [entries, forms, leaves, shifts, punches] = await Promise.all([
     TimeEntries.list({ worker_email: email, sort: '-date', limit: 50 }),
     TaxForms.list({ worker_email: email, status: 'pending' }),
     LeaveRequests.list({ worker_email: email, status: 'pending' }),
@@ -27,7 +26,7 @@ async function fetchData(email) {
   });
   const upcoming = shifts.filter(s => s.date >= format(now, 'yyyy-MM-dd') && s.status !== 'cancelled');
   return {
-    profile: profiles[0] || null,
+    profile: profile || null,
     weekHours: weekEntries.reduce((s, e) => s + (e.regular_hours || 0), 0),
     weekOT: weekEntries.reduce((s, e) => s + (e.overtime_hours || 0), 0),
     pendingForms: forms.length,
@@ -45,7 +44,7 @@ export default function WorkerHome() {
   useEffect(() => {
     api.get('/api/auth/me').then(r => r.data).then(async (me) => {
       setUser(me);
-      const d = await fetchData(me.email);
+      const d = await fetchData(me.email, me?.workerProfile);
       setData(d);
       setLoading(false);
     });
@@ -53,7 +52,7 @@ export default function WorkerHome() {
 
   const onRefresh = useCallback(async () => {
     if (!user) return;
-    const d = await fetchData(user.email);
+    const d = await fetchData(user.email, user?.workerProfile);
     setData(d);
   }, [user]);
 

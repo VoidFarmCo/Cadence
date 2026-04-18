@@ -1,7 +1,6 @@
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import NotificationBell from './NotificationBell';
-import { cn } from '@/lib/utils';
 
 const ROOT_ROUTES = ['/worker-home', '/clock', '/timesheet', '/time-off', '/tax-forms-worker', '/profile', '/expenses', '/deductions'];
 

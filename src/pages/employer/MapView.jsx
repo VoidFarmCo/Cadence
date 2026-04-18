@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Sites, Punches, WorkerProfiles } from '@/api/entities';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
-import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -13,13 +12,6 @@ L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
-
-const workerIcon = new L.DivIcon({
-  html: `<div style="width:28px;height:28px;background:#2d6a4f;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.3)">W</div>`,
-  className: '',
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
 });
 
 export default function MapView() {
@@ -38,7 +30,6 @@ export default function MapView() {
   }, []);
 
   async function load() {
-    const today = new Date().toISOString().split('T')[0];
     const [s, punches, profs] = await Promise.all([
       Sites.list({ status: 'active' }),
       Punches.list({ sort: '-created_date', limit: 200 }),
