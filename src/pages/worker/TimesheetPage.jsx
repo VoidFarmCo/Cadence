@@ -4,7 +4,7 @@ import { TimeEntries } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Send, MapPin } from 'lucide-react';
-import { formatHours, formatTime, formatDate, getWeekRange } from '@/lib/timeUtils';
+import { formatHours, formatTime } from '@/lib/timeUtils';
 import { format, addDays, subDays, startOfWeek, parseISO, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
 

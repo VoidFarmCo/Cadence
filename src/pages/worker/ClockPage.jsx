@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/api/apiClient';
 import { Sites, WorkerProfiles, Punches, TimeEntries } from '@/api/entities';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import GpsChip from '@/components/clock/GpsChip';
 import OutOfGeofenceModal from '@/components/clock/OutOfGeofenceModal';
@@ -43,7 +42,10 @@ export default function ClockPage() {
       else if (s.length > 0) setSelectedSite(s[0].id);
       if (punches.length > 0) setLastPunch(punches[0]);
     }
-    init();
+    init().catch((err) => {
+      console.error('Failed to load clock page data:', err);
+      toast.error('Failed to load your clock data. Please refresh.');
+    });
   }, []);
 
   const refreshGps = useCallback(async () => {
@@ -103,6 +105,7 @@ export default function ClockPage() {
     };
 
     // Optimistic update: immediately reflect the punch in UI
+    const previousPunch = lastPunch;
     setLastPunch({ ...punchData, id: `temp-${now}` });
     setSubmitting(true);
     try {
@@ -139,9 +142,15 @@ export default function ClockPage() {
       const existing = await TimeEntries.list({ worker_email: user.email, date: today });
       if (existing.length > 0) {
         const entry = existing[0];
+        let meta = {};
+        try {
+          meta = JSON.parse(entry.exception_notes || '{}');
+        } catch (err) {
+          console.warn('Malformed exception_notes, resetting:', err);
+        }
         // Store break start time so break_end can calculate duration
         await TimeEntries.update(entry.id, {
-          exception_notes: JSON.stringify({ ...JSON.parse(entry.exception_notes || '{}'), break_start: now }),
+          exception_notes: JSON.stringify({ ...meta, break_start: now }),
         });
       }
     }
@@ -152,18 +161,20 @@ export default function ClockPage() {
       const existing = await TimeEntries.list({ worker_email: user.email, date: today });
       if (existing.length > 0) {
         const entry = existing[0];
-        let extraBreakMinutes = 0;
+        let meta = {};
         try {
-          const meta = JSON.parse(entry.exception_notes || '{}');
-          if (meta.break_start) {
-            extraBreakMinutes = Math.round((new Date(now) - new Date(meta.break_start)) / 60000);
-            delete meta.break_start;
-            await TimeEntries.update(entry.id, {
-              break_minutes: (entry.break_minutes || 0) + extraBreakMinutes,
-              exception_notes: JSON.stringify(meta),
-            });
-          }
-        } catch {}
+          meta = JSON.parse(entry.exception_notes || '{}');
+        } catch (err) {
+          console.warn('Malformed exception_notes, resetting:', err);
+        }
+        if (meta.break_start) {
+          const extraBreakMinutes = Math.round((new Date(now) - new Date(meta.break_start)) / 60000);
+          delete meta.break_start;
+          await TimeEntries.update(entry.id, {
+            break_minutes: (entry.break_minutes || 0) + extraBreakMinutes,
+            exception_notes: JSON.stringify(meta),
+          });
+        }
       }
     }
 
@@ -203,6 +214,11 @@ export default function ClockPage() {
     }
 
     toast.success(`${punchType.replace('_', ' ')} recorded!`);
+    } catch (err) {
+      // Roll back optimistic update and notify the user
+      setLastPunch(previousPunch);
+      console.error('Failed to record punch:', err);
+      toast.error(err?.response?.data?.error || 'Failed to record punch. Please try again.');
     } finally {
       setSubmitting(false);
     }

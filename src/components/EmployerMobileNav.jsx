@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, ClipboardCheck, DollarSign, MoreHorizontal, CalendarDays, Map } from 'lucide-react';
+import { LayoutDashboard, Users, ClipboardCheck, DollarSign, CalendarDays, Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const primaryTabs = [

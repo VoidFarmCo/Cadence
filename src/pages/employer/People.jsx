@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import PullToRefresh from '@/components/PullToRefresh';
 import api from '@/api/apiClient';
 import { WorkerProfiles } from '@/api/entities';

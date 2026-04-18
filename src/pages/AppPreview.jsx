@@ -1,4 +1,4 @@
-import { ArrowLeft, Clock, FileText, DollarSign, Users, CheckCircle2, Menu, LogOut, Settings, BarChart3, ArrowRight, Share2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Menu, LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';

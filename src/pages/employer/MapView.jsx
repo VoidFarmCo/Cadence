@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Sites, Punches, WorkerProfiles } from '@/api/entities';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
-import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';

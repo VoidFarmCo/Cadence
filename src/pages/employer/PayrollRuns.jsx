@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import api from '@/api/apiClient';
 import { PayrollRuns as PayrollRunsAPI, PayPeriods, TimeEntries } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

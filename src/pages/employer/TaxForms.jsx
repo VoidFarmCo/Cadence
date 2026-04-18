@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import api from '@/api/apiClient';
 import { TaxForms as TaxFormsAPI, WorkerProfiles } from '@/api/entities';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';

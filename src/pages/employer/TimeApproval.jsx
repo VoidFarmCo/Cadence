@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Check, X, Clock, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
-import { formatDate, formatTime, formatHours } from '@/lib/timeUtils';
+import { Check, X, AlertTriangle } from 'lucide-react';
+import { formatDate, formatHours } from '@/lib/timeUtils';
 import { toast } from 'sonner';
 
 export default function TimeApproval() {

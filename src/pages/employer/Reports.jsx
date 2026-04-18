@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { TimeEntries, WorkerProfiles } from '@/api/entities';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import StatsCard from '@/components/dashboard/StatsCard';
-import { Clock, DollarSign, Users, CalendarOff } from 'lucide-react';
+import { Clock, Users } from 'lucide-react';
 import { formatHours } from '@/lib/timeUtils';
 
 const COLORS = ['hsl(152,45%,28%)', 'hsl(36,80%,52%)', 'hsl(200,60%,45%)', 'hsl(280,50%,55%)'];
