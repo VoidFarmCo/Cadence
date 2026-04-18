@@ -25,7 +25,7 @@ export default function TimeOffAdmin() {
       await api.post(`/api/leave-requests/${req.id}/review`, { status: 'approved' });
       setRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'approved' } : r));
       toast.success('Leave approved');
-    } catch (err) {
+    } catch {
       toast.error('Failed to approve leave request');
     }
   }
@@ -38,7 +38,7 @@ export default function TimeOffAdmin() {
       setDenyDialog(null);
       setDenyReason('');
       toast.success('Leave denied');
-    } catch (err) {
+    } catch {
       toast.error('Failed to deny leave request');
     }
   }

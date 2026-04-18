@@ -23,7 +23,7 @@ export default function WorkerDetailModal({ worker, open, onClose, onDeleted, on
       toast.success(`${worker.full_name} has been ${label}`);
       onClose();
       if (onUpdated) onUpdated();
-    } catch (err) {
+    } catch {
       toast.error(`Failed to update worker status`);
     }
     setUpdatingStatus(false);

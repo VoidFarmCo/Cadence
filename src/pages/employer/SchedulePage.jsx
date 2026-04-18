@@ -47,7 +47,7 @@ export default function SchedulePage() {
       setShowAdd(false);
       setDraft({ worker_email: '', site_id: '', date: '', start_time: '07:00', end_time: '15:00', notes: '' });
       loadShifts();
-    } catch (err) {
+    } catch {
       toast.error('Failed to add shift');
     }
   }
@@ -56,12 +56,10 @@ export default function SchedulePage() {
     try {
       await Shifts.delete(id);
       setShifts(s => s.filter(x => x.id !== id));
-    } catch (err) {
+    } catch {
       toast.error('Failed to delete shift');
     }
   }
-
-  const statusColor = { scheduled: 'bg-info/10 text-info', confirmed: 'bg-success/10 text-success', cancelled: 'bg-muted text-muted-foreground' };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" /></div>;
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '@/api/apiClient';
-import { Expenses, WorkerProfiles } from '@/api/entities';
+import { Expenses } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -77,10 +77,9 @@ export default function ExpensesPage() {
         const { file_url } = await uploadFile(receiptFile);
         receiptUrl = file_url;
       }
-      const profiles = await WorkerProfiles.list({ user_email: user.email });
       const created = await Expenses.create({
         worker_email: user.email,
-        worker_name: user.full_name || profiles[0]?.full_name,
+        worker_name: user.full_name || user?.workerProfile?.full_name,
         category: form.category,
         amount: parseFloat(form.amount),
         date: form.date,
@@ -91,7 +90,7 @@ export default function ExpensesPage() {
       // Replace optimistic entry with real one
       setExpenses(prev => prev.map(e => e.id === optimisticId ? created : e));
       toast.success('Expense added');
-    } catch (err) {
+    } catch {
       // Rollback optimistic update
       setExpenses(prev => prev.filter(e => e.id !== optimisticId));
       toast.error('Failed to add expense');

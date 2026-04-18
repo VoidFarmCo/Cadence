@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import api from '@/api/apiClient';
 import { TaxForms as TaxFormsAPI, WorkerProfiles } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -115,7 +114,6 @@ export default function TaxForms() {
   const handleSend = async () => {
     setSending(true);
     try {
-      const me = await api.get('/api/auth/me').then(r => r.data);
       const worker = workers.find(w => w.user_email === draft.worker_email);
       const template = FORM_TEMPLATES[draft.form_type] || FORM_TEMPLATES['Custom'];
       await TaxFormsAPI.create({

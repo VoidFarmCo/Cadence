@@ -54,6 +54,7 @@ export async function finalizePayPeriodAndStartPayroll(performedBy: string, comp
         total_regular_hours: totalRegular,
         total_overtime_hours: totalOvertime,
         worker_count: workerEmails.size,
+        company_id: companyId,
       },
     });
 

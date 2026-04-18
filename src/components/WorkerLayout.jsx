@@ -5,7 +5,7 @@ import useCurrentUser from '@/lib/useCurrentUser';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export default function WorkerLayout() {
-  const { user, profile, loading, isContractor } = useCurrentUser();
+  const { user, loading, isContractor } = useCurrentUser();
   const location = useLocation();
 
   if (loading) {

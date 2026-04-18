@@ -28,7 +28,7 @@ export default function People() {
     try {
       const w = await WorkerProfiles.list({ sort: '-created_date' });
       setWorkers(w);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load workers');
     } finally {
       setLoading(false);

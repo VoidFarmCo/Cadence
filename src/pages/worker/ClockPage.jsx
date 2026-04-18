@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/api/apiClient';
-import { Sites, WorkerProfiles, Punches, TimeEntries } from '@/api/entities';
+import { Sites, Punches, TimeEntries } from '@/api/entities';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import GpsChip from '@/components/clock/GpsChip';
 import OutOfGeofenceModal from '@/components/clock/OutOfGeofenceModal';
@@ -30,14 +30,15 @@ export default function ClockPage() {
     async function init() {
       const me = await api.get('/api/auth/me').then(r => r.data);
       setUser(me);
-      const [s, profiles, punches] = await Promise.all([
+      // /api/auth/me embeds the worker profile; avoids a separate
+      // list() call that requires manager role.
+      const p = me?.workerProfile || null;
+      setProfile(p);
+      const [s, punches] = await Promise.all([
         Sites.list({ status: 'active' }),
-        WorkerProfiles.list({ user_email: me.email }),
         Punches.list({ worker_email: me.email, sort: '-created_date', limit: 1 }),
       ]);
       setSites(s);
-      const p = profiles[0];
-      setProfile(p);
       if (p?.default_site_id) setSelectedSite(p.default_site_id);
       else if (s.length > 0) setSelectedSite(s[0].id);
       if (punches.length > 0) setLastPunch(punches[0]);

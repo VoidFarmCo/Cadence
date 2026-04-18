@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import api from '@/api/apiClient';
-import { WorkerProfiles } from '@/api/entities';
 
 export default function useCurrentUser() {
   const [user, setUser] = useState(null);
@@ -12,8 +11,9 @@ export default function useCurrentUser() {
       try {
         const { data: me } = await api.get('/api/auth/me');
         setUser(me);
-        const profiles = await WorkerProfiles.list({ user_email: me.email });
-        setProfile(profiles[0] || null);
+        // /api/auth/me embeds the caller's worker profile; avoids a
+        // second request that would 403 for non-manager roles.
+        setProfile(me?.workerProfile || null);
       } catch {
         // not authenticated
       }

@@ -61,7 +61,7 @@ export default function Settings() {
         setCompany(updated);
         toast.success('Settings saved');
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to save settings');
     }
   }

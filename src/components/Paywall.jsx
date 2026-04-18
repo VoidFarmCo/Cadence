@@ -69,7 +69,7 @@ export default function Paywall({ lockReason }) {
       const priceId = billing === 'monthly' ? plan.monthlyPriceId : plan.annualPriceId;
       const { data } = await api.post('/api/stripe/create-checkout', { price_id: priceId });
       window.location.href = data.url;
-    } catch (err) {
+    } catch {
       toast.error('Could not start checkout. Please try again.');
     } finally {
       setLoading(null);

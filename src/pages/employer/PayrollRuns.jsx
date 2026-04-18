@@ -41,7 +41,7 @@ export default function PayrollRuns() {
       const updated = await PayPeriods.update(period.id, { status: 'locked' });
       setPayPeriods(prev => prev.map(p => p.id === updated.id ? updated : p));
       toast.success('Pay period locked');
-    } catch (err) {
+    } catch {
       toast.error('Failed to lock pay period');
     }
   }
@@ -51,7 +51,7 @@ export default function PayrollRuns() {
       const updated = await PayPeriods.update(period.id, { status: 'open', unlock_reason: 'Unlocked for corrections' });
       setPayPeriods(prev => prev.map(p => p.id === updated.id ? updated : p));
       toast.success('Pay period unlocked');
-    } catch (err) {
+    } catch {
       toast.error('Failed to unlock pay period');
     }
   }

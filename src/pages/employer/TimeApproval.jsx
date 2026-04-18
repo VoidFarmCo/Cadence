@@ -43,7 +43,7 @@ export default function TimeApproval() {
       await TimeEntries.update(entry.id, { status: 'approved' });
       setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'approved' } : e));
       toast.success('Entry approved');
-    } catch (err) {
+    } catch {
       toast.error('Failed to approve entry');
     }
   }
@@ -56,7 +56,7 @@ export default function TimeApproval() {
       setEditDialog(null);
       setEditReason('');
       toast.success('Entry rejected');
-    } catch (err) {
+    } catch {
       toast.error('Failed to reject entry');
     }
   }

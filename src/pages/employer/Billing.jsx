@@ -78,7 +78,6 @@ export default function Billing() {
 
     async function load() {
       try {
-        const me = await api.get('/api/auth/me').then(r => r.data);
         const accountData = await api.get('/api/accounts').then(r => r.data);
         setAccount(accountData || null);
       } catch (err) {
