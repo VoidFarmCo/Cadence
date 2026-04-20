@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import api from '@/api/apiClient';
 
+// Reads the already-fetched user from AuthContext instead of issuing a
+// per-component /api/auth/me request. Fan-out from ~14 consumers was
+// flooding the backend with 401s when logged out and duplicate 200s when
+// logged in.
 export default function useCurrentUser() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
