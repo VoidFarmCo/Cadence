@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
+import { getCompanyId, parsePagination, paginatedResponse } from '../lib/company';
 
 const router = Router();
 
@@ -16,7 +17,11 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const status = qs(req.query.status);
     const start_date = qs(req.query.start_date);
     const end_date = qs(req.query.end_date);
-    const where: any = {};
+
+    const companyId = await getCompanyId(req.user!.email);
+    if (!companyId) { res.json(paginatedResponse([], 0, 1, 50)); return; }
+
+    const where: any = { company_id: companyId };
 
     if (req.user!.role === 'worker') {
       where.worker_email = req.user!.email;
@@ -32,11 +37,17 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
       if (end_date) where.date.lte = new Date(end_date);
     }
 
-    const shifts = await prisma.shift.findMany({
-      where,
-      orderBy: { date: 'asc' },
+    const { skip, take, page, limit } = parsePagination({
+      page: qs(req.query.page),
+      limit: qs(req.query.limit),
     });
-    res.json(shifts);
+
+    const [shifts, total] = await Promise.all([
+      prisma.shift.findMany({ where, orderBy: { date: 'asc' }, skip, take }),
+      prisma.shift.count({ where }),
+    ]);
+
+    res.json(paginatedResponse(shifts, total, page, limit));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch shifts' });
   }
@@ -45,17 +56,20 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 // Get single shift
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const shift = await prisma.shift.findUnique({ where: { id: req.params.id } });
     if (!shift) {
       res.status(404).json({ error: 'Shift not found' });
       return;
     }
-
+    if (!companyId || shift.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
     if (req.user!.role === 'worker' && shift.worker_email !== req.user!.email) {
       res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
-
     res.json(shift);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch shift' });
@@ -82,15 +96,27 @@ router.post(
   validate(createShiftSchema),
   async (req: AuthRequest, res: Response) => {
     try {
-      const workerProfile = await prisma.workerProfile.findFirst({
-        where: { user_email: req.body.worker_email },
+      const companyId = await getCompanyId(req.user!.email);
+      if (!companyId) {
+        res.status(400).json({ error: 'Company not found' });
+        return;
+      }
+
+      // Verify target worker is in this company
+      const targetProfile = await prisma.workerProfile.findFirst({
+        where: { user_email: req.body.worker_email, company_id: companyId },
       });
+      if (!targetProfile) {
+        res.status(403).json({ error: 'Worker not found in your company' });
+        return;
+      }
 
       const shift = await prisma.shift.create({
         data: {
           ...req.body,
-          worker_name: req.body.worker_name || workerProfile?.full_name || req.body.worker_email,
+          worker_name: req.body.worker_name || targetProfile.full_name || req.body.worker_email,
           date: new Date(req.body.date),
+          company_id: companyId,
         },
       });
 
@@ -121,6 +147,28 @@ router.put(
   validate(updateShiftSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
+      const existing = await prisma.shift.findUnique({ where: { id: req.params.id } });
+      if (!existing) {
+        res.status(404).json({ error: 'Shift not found' });
+        return;
+      }
+      if (!companyId || existing.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+
+      // Verify new worker_email also belongs to this company
+      if (req.body.worker_email) {
+        const targetProfile = await prisma.workerProfile.findFirst({
+          where: { user_email: req.body.worker_email, company_id: companyId },
+        });
+        if (!targetProfile) {
+          res.status(403).json({ error: 'Target worker not found in your company' });
+          return;
+        }
+      }
+
       const data: any = { ...req.body };
       if (data.date) data.date = new Date(data.date);
 
@@ -143,6 +191,16 @@ router.delete(
   requireMinRole('manager'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
+      const existing = await prisma.shift.findUnique({ where: { id: req.params.id } });
+      if (!existing) {
+        res.status(404).json({ error: 'Shift not found' });
+        return;
+      }
+      if (!companyId || existing.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
       await prisma.shift.delete({ where: { id: req.params.id } });
       res.json({ message: 'Shift deleted' });
     } catch (error) {

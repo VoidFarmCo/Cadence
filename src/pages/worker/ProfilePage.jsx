@@ -9,8 +9,10 @@ import { Label } from '@/components/ui/label';
 import { DollarSign, MapPin, LogOut, Shield, Smartphone, AlertTriangle, Pencil, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import WorkerDocuments from '@/components/documents/WorkerDocuments';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function ProfilePage() {
+  const { logout } = useAuth();
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,9 +25,9 @@ export default function ProfilePage() {
     async function load() {
       const me = await api.get('/api/auth/me').then(r => r.data);
       setUser(me);
-      const profiles = await WorkerProfiles.list({ user_email: me.email });
-      setProfile(profiles[0]);
-      if (profiles[0]) setInfoForm({ full_name: profiles[0].full_name || '', phone: profiles[0].phone || '' });
+      const p = me?.workerProfile || null;
+      setProfile(p);
+      if (p) setInfoForm({ full_name: p.full_name || '', phone: p.phone || '' });
       setLoading(false);
     }
     load();
@@ -51,9 +53,7 @@ export default function ProfilePage() {
     if (deleteInput.trim().toLowerCase() !== 'delete') return;
     toast.loading('Deleting account...');
     if (profile) await WorkerProfiles.delete(profile.id);
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    window.location.href = '/';
+    await logout('/');
   }
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" /></div>;
@@ -198,11 +198,7 @@ export default function ProfilePage() {
         </Button>
       </div>
 
-      <Button variant="outline" className="w-full gap-2 text-destructive select-none" onClick={() => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/';
-      }}>
+      <Button variant="outline" className="w-full gap-2 text-destructive select-none" onClick={() => logout('/login')}>
         <LogOut className="w-4 h-4" />Sign Out
       </Button>
 

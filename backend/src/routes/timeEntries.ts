@@ -5,8 +5,10 @@ import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
-import { getIO } from '../lib/socket';
+import { emitToCompany } from '../lib/socket';
+import { getCompanyId, parsePagination, paginatedResponse } from '../lib/company';
 import { createAuditLog } from '../services/audit.service';
+import { findPayPeriodForDate } from '../services/payPeriod.service';
 
 const router = Router();
 
@@ -18,7 +20,11 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const pay_period_id = qs(req.query.pay_period_id);
     const start_date = qs(req.query.start_date);
     const end_date = qs(req.query.end_date);
-    const where: any = {};
+
+    const companyId = await getCompanyId(req.user!.email);
+    if (!companyId) { res.json(paginatedResponse([], 0, 1, 50)); return; }
+
+    const where: any = { company_id: companyId };
 
     if (req.user!.role === 'worker') {
       where.worker_email = req.user!.email;
@@ -34,12 +40,17 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
       if (end_date) where.date.lte = new Date(end_date);
     }
 
-    const entries = await prisma.timeEntry.findMany({
-      where,
-      orderBy: { date: 'desc' },
-      take: 1000,
+    const { skip, take, page, limit } = parsePagination({
+      page: qs(req.query.page),
+      limit: qs(req.query.limit),
     });
-    res.json(entries);
+
+    const [entries, total] = await Promise.all([
+      prisma.timeEntry.findMany({ where, orderBy: { date: 'desc' }, skip, take }),
+      prisma.timeEntry.count({ where }),
+    ]);
+
+    res.json(paginatedResponse(entries, total, page, limit));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch time entries' });
   }
@@ -48,17 +59,20 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 // Get single time entry
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const entry = await prisma.timeEntry.findUnique({ where: { id: req.params.id } });
     if (!entry) {
       res.status(404).json({ error: 'Time entry not found' });
       return;
     }
-
+    if (!companyId || entry.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
     if (req.user!.role === 'worker' && entry.worker_email !== req.user!.email) {
       res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
-
     res.json(entry);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch time entry' });
@@ -89,10 +103,29 @@ const createTimeEntrySchema = z.object({
 
 router.post('/', authenticate, validate(createTimeEntrySchema), async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const workerEmail = req.body.worker_email || req.user!.email;
+
+    // Managers can only create entries for workers in their company
+    if (req.body.worker_email && req.user!.role !== 'worker') {
+      const targetProfile = await prisma.workerProfile.findFirst({
+        where: { user_email: workerEmail, company_id: companyId },
+      });
+      if (!targetProfile) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+    }
+
     const workerProfile = await prisma.workerProfile.findFirst({
       where: { user_email: workerEmail },
     });
+
+    // Auto-assign pay_period_id if not provided
+    let payPeriodId = req.body.pay_period_id || null;
+    if (!payPeriodId && companyId) {
+      payPeriodId = await findPayPeriodForDate(companyId, new Date(req.body.date));
+    }
 
     const entry = await prisma.timeEntry.create({
       data: {
@@ -102,6 +135,8 @@ router.post('/', authenticate, validate(createTimeEntrySchema), async (req: Auth
         date: new Date(req.body.date),
         clock_in: req.body.clock_in ? new Date(req.body.clock_in) : undefined,
         clock_out: req.body.clock_out ? new Date(req.body.clock_out) : undefined,
+        pay_period_id: payPeriodId,
+        company_id: companyId,
       },
     });
 
@@ -130,13 +165,17 @@ const updateTimeEntrySchema = z.object({
 
 router.put('/:id', authenticate, validate(updateTimeEntrySchema), async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const existing = await prisma.timeEntry.findUnique({ where: { id: req.params.id } });
     if (!existing) {
       res.status(404).json({ error: 'Time entry not found' });
       return;
     }
+    if (!companyId || existing.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
 
-    // Workers can only edit their own pending entries
     if (req.user!.role === 'worker') {
       if (existing.worker_email !== req.user!.email) {
         res.status(403).json({ error: 'Insufficient permissions' });
@@ -144,6 +183,10 @@ router.put('/:id', authenticate, validate(updateTimeEntrySchema), async (req: Au
       }
       if (existing.status !== 'pending' && existing.status !== 'rejected') {
         res.status(400).json({ error: 'Can only edit pending or rejected entries' });
+        return;
+      }
+      if (req.body.status) {
+        res.status(403).json({ error: 'Workers cannot change entry status' });
         return;
       }
     }
@@ -157,11 +200,8 @@ router.put('/:id', authenticate, validate(updateTimeEntrySchema), async (req: Au
       data,
     });
 
-    // Emit real-time event for status changes
     if (req.body.status) {
-      try {
-        getIO().emit('timeEntry:updated', updated);
-      } catch {}
+      emitToCompany(companyId, 'timeEntry:updated', updated);
     }
 
     await createAuditLog({
@@ -172,6 +212,7 @@ router.put('/:id', authenticate, validate(updateTimeEntrySchema), async (req: Au
       oldValue: existing,
       newValue: updated,
       reason: req.body.edit_reason,
+      companyId,
     });
 
     res.json(updated);
@@ -193,8 +234,13 @@ router.post(
         return;
       }
 
+      const companyId = await getCompanyId(req.user!.email);
       const result = await prisma.timeEntry.updateMany({
-        where: { id: { in: ids }, status: { in: ['pending', 'submitted'] } },
+        where: {
+          id: { in: ids },
+          status: { in: ['pending', 'submitted'] },
+          company_id: companyId,
+        },
         data: { status: 'approved' },
       });
 
@@ -208,6 +254,16 @@ router.post(
 // Delete time entry
 router.delete('/:id', authenticate, requireMinRole('manager'), async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
+    const entry = await prisma.timeEntry.findUnique({ where: { id: req.params.id } });
+    if (!entry) {
+      res.status(404).json({ error: 'Time entry not found' });
+      return;
+    }
+    if (!companyId || entry.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
     await prisma.timeEntry.delete({ where: { id: req.params.id } });
     res.json({ message: 'Time entry deleted' });
   } catch (error) {

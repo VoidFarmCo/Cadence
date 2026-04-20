@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { AuthRequest, qs } from '../types';
+import { getCompanyId, parsePagination, paginatedResponse } from '../lib/company';
 
 const router = Router();
 
@@ -19,7 +20,11 @@ router.get(
       const action = qs(req.query.action);
       const start_date = qs(req.query.start_date);
       const end_date = qs(req.query.end_date);
-      const where: any = {};
+
+      const companyId = await getCompanyId(req.user!.email);
+      if (!companyId) { res.json(paginatedResponse([], 0, 1, 50)); return; }
+
+      const where: any = { company_id: companyId };
 
       if (entity_type) where.entity_type = entity_type;
       if (entity_id) where.entity_id = entity_id;
@@ -31,15 +36,17 @@ router.get(
         if (end_date) where.created_at.lte = new Date(end_date);
       }
 
-      const page = parseInt(qs(req.query.page) || '0', 10) || 1;
-      const limit = Math.min(parseInt(qs(req.query.limit) || '0', 10) || 50, 200);
+      const { skip, take, page, limit } = parsePagination({
+        page: qs(req.query.page),
+        limit: qs(req.query.limit),
+      });
 
       const [logs, total] = await Promise.all([
         prisma.auditLog.findMany({
           where,
           orderBy: { created_at: 'desc' },
-          skip: (page - 1) * limit,
-          take: limit,
+          skip,
+          take,
           include: {
             performer: {
               select: { email: true, full_name: true },
@@ -49,15 +56,7 @@ router.get(
         prisma.auditLog.count({ where }),
       ]);
 
-      res.json({
-        data: logs,
-        pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.ceil(total / limit),
-        },
-      });
+      res.json(paginatedResponse(logs, total, page, limit));
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch audit logs' });
     }
@@ -71,6 +70,8 @@ router.get(
   requireMinRole('manager'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
+
       const log = await prisma.auditLog.findUnique({
         where: { id: req.params.id },
         include: {
@@ -83,6 +84,12 @@ router.get(
         res.status(404).json({ error: 'Audit log not found' });
         return;
       }
+
+      if (!companyId || log.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+
       res.json(log);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch audit log' });

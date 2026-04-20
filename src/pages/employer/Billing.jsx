@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import api from '@/api/apiClient';
-import { Accounts } from '@/api/entities';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CreditCard, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
@@ -10,50 +9,53 @@ const PLANS = [
   {
     id: 'solo',
     name: 'Solo',
-    monthlyPrice: 15,
-    annualPrice: 150,
-    monthlyPriceId: 'price_1TMGsDDPghjun5PixSQyO7gs',
-    annualPriceId: 'price_1TMGsDDPghjun5Pizf7LFxjd',
+    monthlyPrice: 12,
+    annualPrice: 120,
+    monthlyPriceId: 'price_1TMlgW2LZNrR2QMPfaYVOGfP',
+    annualPriceId: 'price_1TMlgW2LZNrR2QMPBCdtBSQU',
     description: '1 user',
     features: ['1 user account', 'GPS time clock', 'Basic reporting', 'Tax forms'],
   },
   {
     id: 'pro',
     name: 'Pro',
-    monthlyPrice: 40,
-    annualPrice: 400,
-    monthlyPriceId: 'price_1TMGsDDPghjun5Pi1KcCN4yt',
-    annualPriceId: 'price_1TMGsDDPghjun5PiynXY1nGn',
-    description: 'Up to 5 users',
-    features: ['5 user accounts', 'GPS time clock', 'Advanced reports', 'Payroll runs', 'Schedule management'],
+    monthlyPrice: 49,
+    annualPrice: 490,
+    monthlyPriceId: 'price_1TMlgX2LZNrR2QMPef24FoUJ',
+    annualPriceId: 'price_1TMlgX2LZNrR2QMPC1K9aM7F',
+    description: 'Up to 10 users',
+    features: ['Everything in Solo', 'Team management', 'Payroll runs', 'Scheduling'],
     popular: true,
   },
   {
     id: 'business',
     name: 'Business',
-    monthlyPrice: 100,
-    annualPrice: 1000,
-    monthlyPriceId: 'price_1TMGsDDPghjun5PiCFdTX8Wi',
-    annualPriceId: 'price_1TMGsDDPghjun5Pie9vyRaPb',
-    description: 'Up to 20 users',
-    features: ['20 user accounts', 'All Pro features', 'Check.hq integration', 'Priority support'],
+    monthlyPrice: 129,
+    annualPrice: 1290,
+    monthlyPriceId: 'price_1TMlgY2LZNrR2QMPYt0HdyYX',
+    annualPriceId: 'price_1TMlgY2LZNrR2QMPMRvhqohb',
+    description: 'Up to 25 users',
+    features: ['Everything in Pro', 'Advanced analytics', 'Priority support'],
   },
   {
-    id: 'business-pro',
+    id: 'business_pro',
     name: 'Business Pro',
-    monthlyPrice: 225,
-    annualPrice: 2250,
-    monthlyPriceId: 'price_1TMGwDDPghjun5Pi7Q74Xy9U',
-    annualPriceId: 'price_1TMGwDDPghjun5PiBFsszW9I',
+    monthlyPrice: 300,
+    annualPrice: 3000,
+    monthlyPriceId: 'price_1TMlgZ2LZNrR2QMPnyeGAs48',
+    annualPriceId: 'price_1TMlgZ2LZNrR2QMPO5ZzSbG5',
     description: 'Up to 50 users',
-    features: ['50 user accounts', 'All Business features', 'Advanced integrations', 'Dedicated support'],
+    features: ['Everything in Business', 'Custom integrations', 'Dedicated support'],
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    enterprise: true,
+    monthlyPrice: 500,
+    annualPrice: 5000,
+    monthlyPriceId: 'price_1TMlgZ2LZNrR2QMP54JCUuc4',
+    annualPriceId: 'price_1TMlga2LZNrR2QMPu42QcNuy',
     description: 'Unlimited users',
-    features: ['Unlimited user accounts', 'All Business features', 'Custom integrations', 'Dedicated account manager'],
+    features: ['Everything in Business Pro', 'Unlimited users', 'Custom contract', 'Dedicated account manager'],
   },
 ];
 
@@ -69,39 +71,31 @@ export default function Billing() {
     if (params.get('success')) {
       toast.success('Payment successful! Your plan will update shortly.');
       window.history.replaceState({}, '', window.location.pathname);
-    } else if (params.get('cancelled')) {
+    } else if (params.get('canceled') || params.get('cancelled')) {
       toast.info('Checkout cancelled.');
       window.history.replaceState({}, '', window.location.pathname);
     }
 
     async function load() {
-      const me = await api.get('/api/auth/me').then(r => r.data);
-      const accounts = await Accounts.list({ owner_email: me.email });
-      setAccount(accounts[0] || null);
-      setLoading(false);
+      try {
+        const accountData = await api.get('/api/accounts').then(r => r.data);
+        setAccount(accountData || null);
+      } catch (err) {
+        console.error('Failed to load billing data:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, []);
 
   async function handleUpgrade(plan) {
-    if (plan.enterprise) {
-      window.location.href = 'mailto:sales@example.com?subject=Enterprise%20Plan%20Inquiry';
-      return;
-    }
-
     setCheckoutLoading(plan.id);
     try {
       const priceId = billingInterval === 'monthly' ? plan.monthlyPriceId : plan.annualPriceId;
-      const res = await api.post('/api/stripe/create-checkout', { price_id: priceId, plan_id: plan.id }).then(r => r.data);
-      const url = res?.url || res?.data?.url;
-      if (!url) throw new Error('No checkout URL returned');
-
-      // Check if running in iframe
-      if (window.self !== window.top) {
-        alert('Checkout only works from the published app. Please open the app directly to upgrade.');
-        return;
-      }
-      window.location.href = url;
+      const { data } = await api.post('/api/stripe/create-checkout', { price_id: priceId });
+      if (!data.url) throw new Error('No checkout URL returned');
+      window.location.href = data.url;
     } catch (err) {
       toast.error('Could not start checkout: ' + err.message);
     } finally {
@@ -213,26 +207,21 @@ export default function Billing() {
                 <h3 className="font-semibold text-base">{plan.name}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">{plan.description}</p>
               </div>
-              {!plan.enterprise && (
-                <div className="flex flex-col gap-0.5">
-                  <div className="flex items-end gap-1">
-                    <span className="text-2xl font-bold">
-                      ${billingInterval === 'monthly' ? plan.monthlyPrice : plan.annualPrice}
-                    </span>
-                    <span className="text-sm text-muted-foreground mb-1">
-                      {billingInterval === 'monthly' ? '/mo' : '/yr'}
-                    </span>
-                  </div>
-                  {billingInterval === 'annual' && (
-                    <p className="text-xs text-success">
-                      Save {Math.round((1 - plan.annualPrice / (plan.monthlyPrice * 12)) * 100)}% vs monthly
-                    </p>
-                  )}
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-end gap-1">
+                  <span className="text-2xl font-bold">
+                    ${billingInterval === 'monthly' ? plan.monthlyPrice : plan.annualPrice}
+                  </span>
+                  <span className="text-sm text-muted-foreground mb-1">
+                    {billingInterval === 'monthly' ? '/mo' : '/yr'}
+                  </span>
                 </div>
-              )}
-              {plan.enterprise && (
-                <div className="text-sm text-muted-foreground font-medium">Contact Sales</div>
-              )}
+                {billingInterval === 'annual' && (
+                  <p className="text-xs text-success">
+                    ${(plan.annualPrice / 12).toFixed(0)}/mo billed annually
+                  </p>
+                )}
+              </div>
               <ul className="space-y-2 flex-1">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -251,8 +240,6 @@ export default function Billing() {
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : isCurrent ? (
                   'Current Plan'
-                ) : plan.enterprise ? (
-                  'Contact Sales'
                 ) : (
                   'Upgrade'
                 )}

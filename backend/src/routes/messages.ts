@@ -5,7 +5,8 @@ import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
-import { getIO } from '../lib/socket';
+import { emitToCompany } from '../lib/socket';
+import { getCompanyId, parsePagination, paginatedResponse } from '../lib/company';
 
 const router = Router();
 
@@ -14,10 +15,12 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const type = qs(req.query.type);
     const category = qs(req.query.category);
-    const where: any = {};
 
+    const companyId = await getCompanyId(req.user!.email);
+    if (!companyId) { res.json(paginatedResponse([], 0, 1, 50)); return; }
+
+    const where: any = { company_id: companyId };
     if (req.user!.role === 'worker') {
-      // Workers see messages where they are a recipient or sender
       where.OR = [
         { sender_email: req.user!.email },
         { recipient_emails: { has: req.user!.email } },
@@ -28,12 +31,17 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     if (type) where.type = type;
     if (category) where.category = category;
 
-    const messages = await prisma.message.findMany({
-      where,
-      orderBy: { created_at: 'desc' },
-      take: 200,
+    const { skip, take, page, limit } = parsePagination({
+      page: qs(req.query.page),
+      limit: qs(req.query.limit),
     });
-    res.json(messages);
+
+    const [messages, total] = await Promise.all([
+      prisma.message.findMany({ where, orderBy: { created_at: 'desc' }, skip, take }),
+      prisma.message.count({ where }),
+    ]);
+
+    res.json(paginatedResponse(messages, total, page, limit));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch messages' });
   }
@@ -42,10 +50,24 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 // Get single message
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const message = await prisma.message.findUnique({ where: { id: req.params.id } });
     if (!message) {
       res.status(404).json({ error: 'Message not found' });
       return;
+    }
+    if (!companyId || message.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
+    // Workers can only see their own messages
+    if (req.user!.role === 'worker') {
+      if (message.sender_email !== req.user!.email &&
+          !message.recipient_emails.includes(req.user!.email) &&
+          message.type !== 'broadcast') {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
     }
     res.json(message);
   } catch (error) {
@@ -69,6 +91,7 @@ router.post(
   validate(createMessageSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
       const senderProfile = await prisma.workerProfile.findFirst({
         where: { user_email: req.user!.email },
       });
@@ -78,13 +101,11 @@ router.post(
           ...req.body,
           sender_email: req.user!.email,
           sender_name: senderProfile?.full_name || req.user!.email,
+          company_id: companyId,
         },
       });
 
-      // Emit real-time notification
-      try {
-        getIO().emit('message:new', message);
-      } catch {}
+      emitToCompany(companyId, 'message:new', message);
 
       res.status(201).json(message);
     } catch (error) {
@@ -96,9 +117,14 @@ router.post(
 // Mark message as read
 router.post('/:id/read', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const message = await prisma.message.findUnique({ where: { id: req.params.id } });
     if (!message) {
       res.status(404).json({ error: 'Message not found' });
+      return;
+    }
+    if (!companyId || message.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
 
@@ -126,6 +152,16 @@ router.delete(
   requireMinRole('manager'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
+      const message = await prisma.message.findUnique({ where: { id: req.params.id } });
+      if (!message) {
+        res.status(404).json({ error: 'Message not found' });
+        return;
+      }
+      if (!companyId || message.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
       await prisma.message.delete({ where: { id: req.params.id } });
       res.json({ message: 'Message deleted' });
     } catch (error) {

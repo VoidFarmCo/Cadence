@@ -1,7 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, MapPin, ClipboardCheck, CalendarOff, DollarSign, BarChart3, Settings, LogOut, FileText, Map, CalendarDays, CreditCard, PieChart, UserCheck } from 'lucide-react';
-
-
+import { LayoutDashboard, Users, MapPin, ClipboardCheck, CalendarOff, DollarSign, BarChart3, Settings, LogOut, FileText, Map, CalendarDays, CreditCard, PieChart, UserCheck, Shield } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -23,12 +22,14 @@ const navItems = [
 
 export default function EmployerSidebar({ user }) {
   const { pathname } = useLocation();
+  const { logout } = useAuth();
+  const isSuperAdmin = user?.platform_role === 'superadmin' || user?.is_platform_admin;
 
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
       <div className="p-6 border-b border-sidebar-border">
         <Link to="/" className="flex items-center gap-3">
-          <img src="https://media.base44.com/images/public/69db595f420acc2fe622536d/9b4a5552a_cadence_logo_v3b.png" alt="Cadence" className="w-8 h-8 object-contain" />
+          <img src="/cadence-logo.png" alt="Cadence" className="w-8 h-8 object-contain" />
           <div>
             <h1 className="text-sm font-bold text-sidebar-foreground font-display tracking-tight">Cadence</h1>
             <p className="text-[11px] text-sidebar-foreground/50">Workforce Management</p>
@@ -37,6 +38,20 @@ export default function EmployerSidebar({ user }) {
       </div>
 
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+        {isSuperAdmin && (
+          <Link
+            to="/admin"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 mb-2",
+              pathname.startsWith('/admin')
+                ? "bg-purple-500/10 text-purple-600"
+                : "text-purple-500/70 hover:bg-purple-500/10 hover:text-purple-600"
+            )}
+          >
+            <Shield className="w-[18px] h-[18px]" />
+            <span>Platform Admin</span>
+          </Link>
+        )}
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = path === '/' ? pathname === '/' : pathname.startsWith(path);
           return (
@@ -67,12 +82,9 @@ export default function EmployerSidebar({ user }) {
             <p className="text-[10px] text-sidebar-foreground/50 capitalize">{user?.role || 'owner'}</p>
           </div>
           <button
-            onClick={() => {
-              localStorage.removeItem('accessToken');
-              localStorage.removeItem('refreshToken');
-              window.location.href = '/';
-            }}
+            onClick={() => logout('/login')}
             className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
+            title="Sign out"
           >
             <LogOut className="w-4 h-4" />
           </button>

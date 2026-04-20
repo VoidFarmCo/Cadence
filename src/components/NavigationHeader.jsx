@@ -1,7 +1,6 @@
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import NotificationBell from './NotificationBell';
-import { cn } from '@/lib/utils';
 
 const ROOT_ROUTES = ['/worker-home', '/clock', '/timesheet', '/time-off', '/tax-forms-worker', '/profile', '/expenses', '/deductions'];
 
@@ -18,7 +17,7 @@ export default function NavigationHeader({ user, isAdmin }) {
       <div className="flex items-center justify-between h-14 px-4 max-w-lg mx-auto">
         {isRoot ? (
           <Link to="/worker-home" className="flex items-center gap-2 select-none">
-            <img src="https://media.base44.com/images/public/69db595f420acc2fe622536d/9b4a5552a_cadence_logo_v3b.png" alt="Cadence" className="w-7 h-7 object-contain" />
+            <img src="/cadence-logo.png" alt="Cadence" className="w-7 h-7 object-contain" />
             <span className="font-bold text-sm font-display text-primary">Cadence</span>
           </Link>
         ) : (

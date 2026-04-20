@@ -3,16 +3,31 @@ import { env } from '../config/env';
 
 let transporter: nodemailer.Transporter | null = null;
 
+export function isEmailConfigured(): boolean {
+  return Boolean(env.SMTP_HOST && env.SMTP_FROM);
+}
+
 function getTransporter(): nodemailer.Transporter {
+  if (!isEmailConfigured()) {
+    throw new Error(
+      'SMTP is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and SMTP_FROM in the backend environment.'
+    );
+  }
   if (!transporter) {
+    const port = parseInt(env.SMTP_PORT, 10);
     transporter = nodemailer.createTransport({
       host: env.SMTP_HOST,
-      port: parseInt(env.SMTP_PORT, 10),
-      secure: parseInt(env.SMTP_PORT, 10) === 465,
+      port,
+      secure: port === 465,
       auth:
         env.SMTP_USER && env.SMTP_PASS
           ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
           : undefined,
+      // Bound the connection/send so a misconfigured SMTP host does not
+      // hang a user-facing request for minutes.
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 15_000,
     });
   }
   return transporter;
@@ -23,18 +38,13 @@ export async function sendEmail(
   subject: string,
   html: string
 ): Promise<void> {
-  try {
-    const transport = getTransporter();
-    await transport.sendMail({
-      from: env.SMTP_FROM,
-      to: Array.isArray(to) ? to.join(', ') : to,
-      subject,
-      html,
-    });
-  } catch (error) {
-    console.error('Failed to send email:', error);
-    // Don't throw — email failures shouldn't break the request
-  }
+  const transport = getTransporter();
+  await transport.sendMail({
+    from: env.SMTP_FROM,
+    to: Array.isArray(to) ? to.join(', ') : to,
+    subject,
+    html,
+  });
 }
 
 export async function sendInviteEmail(
@@ -42,7 +52,7 @@ export async function sendInviteEmail(
   fullName: string,
   inviteToken: string
 ): Promise<void> {
-  const inviteUrl = `${env.APP_URL}/accept-invite?token=${inviteToken}`;
+  const inviteUrl = buildInviteUrl(inviteToken);
   const html = `
     <h2>You've been invited to Cadence</h2>
     <p>Hi ${fullName},</p>
@@ -53,6 +63,10 @@ export async function sendInviteEmail(
     <p>This invite will expire in 7 days.</p>
   `;
   await sendEmail(email, 'You\'re invited to Cadence', html);
+}
+
+export function buildInviteUrl(inviteToken: string): string {
+  return `${env.APP_URL}/accept-invite?token=${inviteToken}`;
 }
 
 export async function sendPasswordResetEmail(

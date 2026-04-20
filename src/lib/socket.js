@@ -1,17 +1,21 @@
 import { io } from 'socket.io-client';
+import { getAccessToken } from '@/utils/auth';
 
 let socket = null;
 
 export function getSocket() {
   if (socket) return socket;
 
-  const token = localStorage.getItem('accessToken');
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   socket = io(apiUrl, {
-    auth: { token },
+    withCredentials: true,
     transports: ['websocket', 'polling'],
     autoConnect: true,
+    auth: (cb) => {
+      // Called on every connect/reconnect — always sends fresh token
+      cb({ token: getAccessToken() });
+    },
   });
 
   socket.on('connect_error', (err) => {

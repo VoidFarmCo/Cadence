@@ -1,10 +1,11 @@
-import { UserRole } from '@prisma/client';
+import { UserRole, PlatformRole } from '@prisma/client';
 import { Request } from 'express';
 
 export interface JwtPayload {
   userId: string;
   email: string;
   role: UserRole;
+  platform_role: PlatformRole;
 }
 
 export interface AuthRequest extends Request {
@@ -19,14 +20,16 @@ export interface PaginationQuery {
 }
 
 export const STRIPE_PRICE_IDS: Record<string, string> = {
-  solo_month: 'price_1TMGsDDPghjun5PixSQyO7gs',
-  solo_year: 'price_1TMGsDDPghjun5Pizf7LFxjd',
-  pro_month: 'price_1TMGsDDPghjun5Pi1KcCN4yt',
-  pro_year: 'price_1TMGsDDPghjun5PiynXY1nGn',
-  business_month: 'price_1TMGsDDPghjun5PiCFdTX8Wi',
-  business_year: 'price_1TMGsDDPghjun5Pie9vyRaPb',
-  business_pro_month: 'price_1TMGwDDPghjun5Pi7Q74Xy9U',
-  business_pro_year: 'price_1TMGwDDPghjun5PiBFsszW9I',
+  solo_month:         'price_1TMlgW2LZNrR2QMPfaYVOGfP',
+  solo_year:          'price_1TMlgW2LZNrR2QMPBCdtBSQU',
+  pro_month:          'price_1TMlgX2LZNrR2QMPef24FoUJ',
+  pro_year:           'price_1TMlgX2LZNrR2QMPC1K9aM7F',
+  business_month:     'price_1TMlgY2LZNrR2QMPYt0HdyYX',
+  business_year:      'price_1TMlgY2LZNrR2QMPMRvhqohb',
+  business_pro_month: 'price_1TMlgZ2LZNrR2QMPnyeGAs48',
+  business_pro_year:  'price_1TMlgZ2LZNrR2QMPO5ZzSbG5',
+  enterprise_month:   'price_1TMlgZ2LZNrR2QMP54JCUuc4',
+  enterprise_year:    'price_1TMlga2LZNrR2QMPu42QcNuy',
 };
 
 export const VALID_PRICE_IDS = new Set(Object.values(STRIPE_PRICE_IDS));

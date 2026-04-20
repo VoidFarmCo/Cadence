@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Sites, Punches, WorkerProfiles } from '@/api/entities';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
-import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { getSocket } from '@/lib/socket';
 
 // Fix leaflet default icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -12,13 +12,6 @@ L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
-
-const workerIcon = new L.DivIcon({
-  html: `<div style="width:28px;height:28px;background:#2d6a4f;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.3)">W</div>`,
-  className: '',
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
 });
 
 export default function MapView() {
@@ -29,12 +22,14 @@ export default function MapView() {
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, 30000);
-    return () => clearInterval(interval);
+
+    // Update map only when a worker punches in or out — no polling
+    const socket = getSocket();
+    socket.on('punch:created', load);
+    return () => socket.off('punch:created', load);
   }, []);
 
   async function load() {
-    const today = new Date().toISOString().split('T')[0];
     const [s, punches, profs] = await Promise.all([
       Sites.list({ status: 'active' }),
       Punches.list({ sort: '-created_date', limit: 200 }),
@@ -73,7 +68,7 @@ export default function MapView() {
         <div>
           <h1 className="text-2xl font-bold font-display tracking-tight">Live Field Map</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {activePunches.length} worker{activePunches.length !== 1 ? 's' : ''} currently clocked in · refreshes every 30s
+            {activePunches.length} worker{activePunches.length !== 1 ? 's' : ''} currently clocked in · updates on clock in/out
           </p>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
 import { createAuditLog } from '../services/audit.service';
+import { getCompanyId, parsePagination, paginatedResponse } from '../lib/company';
 
 const router = Router();
 
@@ -14,15 +15,26 @@ router.get('/', authenticate, requireMinRole('manager'), async (req: AuthRequest
   try {
     const status = qs(req.query.status);
     const worker_type = qs(req.query.worker_type);
-    const where: any = {};
+    const companyId = await getCompanyId(req.user!.email);
+    if (!companyId) {
+      res.json(paginatedResponse([], 0, 1, 50));
+      return;
+    }
+    const where: any = { company_id: companyId };
     if (status) where.status = status;
     if (worker_type) where.worker_type = worker_type;
 
-    const profiles = await prisma.workerProfile.findMany({
-      where,
-      orderBy: { full_name: 'asc' },
+    const { skip, take, page, limit } = parsePagination({
+      page: qs(req.query.page),
+      limit: qs(req.query.limit),
     });
-    res.json(profiles);
+
+    const [profiles, total] = await Promise.all([
+      prisma.workerProfile.findMany({ where, orderBy: { full_name: 'asc' }, skip, take }),
+      prisma.workerProfile.count({ where }),
+    ]);
+
+    res.json(paginatedResponse(profiles, total, page, limit));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch worker profiles' });
   }
@@ -47,6 +59,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
 // Get single worker profile
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const profile = await prisma.workerProfile.findUnique({
       where: { id: req.params.id },
     });
@@ -55,8 +68,12 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // Workers can only see their own profile
-    if (req.user!.role === 'worker' && profile.user_email !== req.user!.email) {
+    if (req.user!.role === 'worker') {
+      if (profile.user_email !== req.user!.email) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+    } else if (!companyId || profile.company_id !== companyId) {
       res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
@@ -72,7 +89,7 @@ const updateProfileSchema = z.object({
   full_name: z.string().min(1).optional(),
   phone: z.string().optional(),
   worker_type: z.enum(['employee', 'contractor']).optional(),
-  role: z.enum(['owner', 'payroll_admin', 'manager', 'worker']).optional(),
+  role: z.enum(['payroll_admin', 'manager', 'worker']).optional(),
   pay_rate: z.number().positive().optional(),
   default_site_id: z.string().uuid().nullable().optional(),
   status: z.enum(['active', 'inactive', 'pending']).optional(),
@@ -90,11 +107,22 @@ router.put(
   validate(updateProfileSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
       const existing = await prisma.workerProfile.findUnique({
         where: { id: req.params.id },
       });
       if (!existing) {
         res.status(404).json({ error: 'Profile not found' });
+        return;
+      }
+      if (!companyId || existing.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+
+      // Only owners can change roles
+      if (req.body.role && req.user!.role !== 'owner') {
+        res.status(403).json({ error: 'Only owners can change user roles' });
         return;
       }
 
@@ -111,6 +139,14 @@ router.put(
         });
       }
 
+      // If status was changed, also update the User record
+      if (req.body.status && req.body.status !== existing.status) {
+        await prisma.user.updateMany({
+          where: { email: existing.user_email },
+          data: { status: req.body.status },
+        });
+      }
+
       await createAuditLog({
         action: 'update',
         entityType: 'worker_profile',
@@ -118,6 +154,7 @@ router.put(
         performedBy: req.user!.userId,
         oldValue: existing,
         newValue: updated,
+        companyId,
       });
 
       res.json(updated);
@@ -134,6 +171,7 @@ router.delete(
   requireMinRole('owner'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
       const profile = await prisma.workerProfile.findUnique({
         where: { id: req.params.id },
       });
@@ -141,12 +179,17 @@ router.delete(
         res.status(404).json({ error: 'Profile not found' });
         return;
       }
+      if (!companyId || profile.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
 
-      await prisma.workerProfile.update({
+      // Hard-delete the worker profile
+      await prisma.workerProfile.delete({
         where: { id: req.params.id },
-        data: { status: 'inactive' },
       });
 
+      // Deactivate the user account (don't delete — preserves audit trail)
       await prisma.user.updateMany({
         where: { email: profile.user_email },
         data: { status: 'inactive' },
@@ -157,6 +200,7 @@ router.delete(
         entityType: 'worker_profile',
         entityId: profile.id,
         performedBy: req.user!.userId,
+        companyId,
       });
 
       res.json({ message: 'Profile deactivated' });

@@ -59,6 +59,13 @@ export async function registerOwner(
   const trialEnd = new Date();
   trialEnd.setDate(trialEnd.getDate() + 30);
 
+  const company = await prisma.company.create({
+    data: {
+      name: companyName,
+      owner_email: email,
+    },
+  });
+
   const account = await prisma.account.create({
     data: {
       owner_email: email,
@@ -66,12 +73,7 @@ export async function registerOwner(
       status: 'trial',
       plan: 'solo',
       trial_end: trialEnd,
-    },
-  });
-
-  const company = await prisma.company.create({
-    data: {
-      name: companyName,
+      company_id: company.id,
     },
   });
 
@@ -82,6 +84,7 @@ export async function registerOwner(
       role: UserRole.owner,
       status: 'active',
       worker_type: 'employee',
+      company_id: company.id,
     },
   });
 
@@ -92,7 +95,8 @@ export async function createInvitedUser(
   email: string,
   fullName: string,
   role: UserRole,
-  invitedByEmail: string
+  invitedByEmail: string,
+  companyId: string | null
 ) {
   const inviteToken = generateInviteToken();
 
@@ -113,6 +117,7 @@ export async function createInvitedUser(
       full_name: fullName,
       role,
       status: 'pending',
+      company_id: companyId,
     },
   });
 
@@ -120,8 +125,13 @@ export async function createInvitedUser(
 }
 
 export async function acceptInvite(token: string, password: string) {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const user = await prisma.user.findFirst({
-    where: { invite_token: token, status: 'pending' },
+    where: {
+      invite_token: token,
+      status: 'pending',
+      created_at: { gt: sevenDaysAgo },
+    },
   });
 
   if (!user) {

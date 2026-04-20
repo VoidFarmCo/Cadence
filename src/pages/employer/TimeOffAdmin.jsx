@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '@/api/apiClient';
-import { LeaveRequests, AuditLogs } from '@/api/entities';
+import { LeaveRequests } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -22,16 +22,10 @@ export default function TimeOffAdmin() {
 
   async function handleApprove(req) {
     try {
-      const me = await api.get('/api/auth/me').then(r => r.data);
-      await LeaveRequests.update(req.id, {
-        status: 'approved', reviewed_by: me.email, reviewed_at: new Date().toISOString()
-      });
-      await AuditLogs.create({
-        action: 'leave_approve', entity_type: 'LeaveRequest', entity_id: req.id, performed_by: me.email
-      });
+      await api.post(`/api/leave-requests/${req.id}/review`, { status: 'approved' });
       setRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'approved' } : r));
       toast.success('Leave approved');
-    } catch (err) {
+    } catch {
       toast.error('Failed to approve leave request');
     }
   }
@@ -39,18 +33,12 @@ export default function TimeOffAdmin() {
   async function handleDeny() {
     if (!denyReason) { toast.error('Reason required'); return; }
     try {
-      const me = await api.get('/api/auth/me').then(r => r.data);
-      await LeaveRequests.update(denyDialog.id, {
-        status: 'denied', reviewed_by: me.email, reviewed_at: new Date().toISOString(), denial_reason: denyReason
-      });
-      await AuditLogs.create({
-        action: 'leave_deny', entity_type: 'LeaveRequest', entity_id: denyDialog.id, performed_by: me.email, reason: denyReason
-      });
+      await api.post(`/api/leave-requests/${denyDialog.id}/review`, { status: 'denied', denial_reason: denyReason });
       setRequests(prev => prev.map(r => r.id === denyDialog.id ? { ...r, status: 'denied' } : r));
       setDenyDialog(null);
       setDenyReason('');
       toast.success('Leave denied');
-    } catch (err) {
+    } catch {
       toast.error('Failed to deny leave request');
     }
   }

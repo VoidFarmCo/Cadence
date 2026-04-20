@@ -42,7 +42,7 @@ export default function Sites() {
       setDialogOpen(false);
       setForm({ name: '', latitude: '', longitude: '', radius_meters: '200', address: '' });
       loadSites();
-    } catch (err) {
+    } catch {
       toast.error('Failed to create site');
     }
   }

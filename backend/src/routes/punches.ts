@@ -5,7 +5,8 @@ import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
-import { getIO } from '../lib/socket';
+import { emitToCompany } from '../lib/socket';
+import { getCompanyId, parsePagination, paginatedResponse } from '../lib/company';
 import { checkGeofenceAndAlert } from '../services/geofence.service';
 
 const router = Router();
@@ -18,9 +19,12 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const punch_type = qs(req.query.punch_type);
     const start_date = qs(req.query.start_date);
     const end_date = qs(req.query.end_date);
-    const where: any = {};
 
-    // Workers can only see their own punches
+    const companyId = await getCompanyId(req.user!.email);
+    if (!companyId) { res.json(paginatedResponse([], 0, 1, 50)); return; }
+
+    const where: any = { company_id: companyId };
+
     if (req.user!.role === 'worker') {
       where.worker_email = req.user!.email;
     } else if (worker_email) {
@@ -35,12 +39,17 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
       if (end_date) where.timestamp.lte = new Date(end_date);
     }
 
-    const punches = await prisma.punch.findMany({
-      where,
-      orderBy: { timestamp: 'desc' },
-      take: 500,
+    const { skip, take, page, limit } = parsePagination({
+      page: qs(req.query.page),
+      limit: qs(req.query.limit),
     });
-    res.json(punches);
+
+    const [punches, total] = await Promise.all([
+      prisma.punch.findMany({ where, orderBy: { timestamp: 'desc' }, skip, take }),
+      prisma.punch.count({ where }),
+    ]);
+
+    res.json(paginatedResponse(punches, total, page, limit));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch punches' });
   }
@@ -49,17 +58,20 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 // Get single punch
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const punch = await prisma.punch.findUnique({ where: { id: req.params.id } });
     if (!punch) {
       res.status(404).json({ error: 'Punch not found' });
       return;
     }
-
+    if (!companyId || punch.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
     if (req.user!.role === 'worker' && punch.worker_email !== req.user!.email) {
       res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
-
     res.json(punch);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch punch' });
@@ -84,6 +96,7 @@ const createPunchSchema = z.object({
 
 router.post('/', authenticate, validate(createPunchSchema), async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const workerProfile = await prisma.workerProfile.findFirst({
       where: { user_email: req.user!.email },
     });
@@ -96,13 +109,11 @@ router.post('/', authenticate, validate(createPunchSchema), async (req: AuthRequ
         timestamp: req.body.timestamp ? new Date(req.body.timestamp) : new Date(),
         device_timestamp: req.body.device_timestamp ? new Date(req.body.device_timestamp) : undefined,
         synced_at: req.body.offline_captured ? new Date() : undefined,
+        company_id: companyId,
       },
     });
 
-    // Emit real-time event
-    try {
-      getIO().emit('punch:created', punch);
-    } catch {}
+    emitToCompany(companyId, 'punch:created', punch);
 
     // Check geofence and alert asynchronously
     if (punch.out_of_geofence) {
@@ -122,6 +133,16 @@ router.delete(
   requireMinRole('manager'),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
+      const punch = await prisma.punch.findUnique({ where: { id: req.params.id } });
+      if (!punch) {
+        res.status(404).json({ error: 'Punch not found' });
+        return;
+      }
+      if (!companyId || punch.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
       await prisma.punch.delete({ where: { id: req.params.id } });
       res.json({ message: 'Punch deleted' });
     } catch (error) {

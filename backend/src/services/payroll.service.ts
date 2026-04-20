@@ -1,27 +1,36 @@
 import prisma from '../lib/prisma';
 
-export async function finalizePayPeriodAndStartPayroll(performedBy: string) {
+export async function finalizePayPeriodAndStartPayroll(performedBy: string, companyId: string | null) {
+  if (!companyId) return [];
+
   const now = new Date();
 
-  // Find open pay periods whose end_date has passed
+  // Find open pay periods whose end_date has passed, scoped to this company
   const openPeriods = await prisma.payPeriod.findMany({
     where: {
       status: 'open',
       end_date: { lt: now },
+      company_id: companyId,
     },
   });
 
   const results = [];
 
   for (const period of openPeriods) {
-    // Aggregate time entries for this pay period
+    // Only count approved entries for payroll
     const entries = await prisma.timeEntry.findMany({
-      where: { pay_period_id: period.id, status: { in: ['approved', 'submitted'] } },
+      where: { pay_period_id: period.id, status: 'approved' },
     });
 
     const workerEmails = new Set(entries.map((e) => e.worker_email));
     const totalRegular = entries.reduce((sum, e) => sum + (e.regular_hours || 0), 0);
     const totalOvertime = entries.reduce((sum, e) => sum + (e.overtime_hours || 0), 0);
+
+    // Check for existing draft run to prevent duplicates
+    const existingRun = await prisma.payrollRun.findFirst({
+      where: { pay_period_id: period.id },
+    });
+    if (existingRun) continue;
 
     // Lock the pay period
     const lockedPeriod = await prisma.payPeriod.update({
@@ -45,6 +54,7 @@ export async function finalizePayPeriodAndStartPayroll(performedBy: string) {
         total_regular_hours: totalRegular,
         total_overtime_hours: totalOvertime,
         worker_count: workerEmails.size,
+        company_id: companyId,
       },
     });
 
@@ -55,6 +65,12 @@ export async function finalizePayPeriodAndStartPayroll(performedBy: string) {
 }
 
 export async function submitPayrollRun(payrollRunId: string, submittedBy: string) {
+  const run = await prisma.payrollRun.findUnique({ where: { id: payrollRunId } });
+  if (!run) throw new Error('Payroll run not found');
+  if (run.status !== 'draft' && run.status !== 'reviewing') {
+    throw new Error(`Cannot submit a payroll run in '${run.status}' status`);
+  }
+
   return prisma.payrollRun.update({
     where: { id: payrollRunId },
     data: {
@@ -66,7 +82,13 @@ export async function submitPayrollRun(payrollRunId: string, submittedBy: string
 }
 
 export async function completePayrollRun(payrollRunId: string, workerResults: string) {
-  const run = await prisma.payrollRun.update({
+  const run = await prisma.payrollRun.findUnique({ where: { id: payrollRunId } });
+  if (!run) throw new Error('Payroll run not found');
+  if (run.status !== 'submitted') {
+    throw new Error(`Cannot complete a payroll run in '${run.status}' status`);
+  }
+
+  const updated = await prisma.payrollRun.update({
     where: { id: payrollRunId },
     data: {
       status: 'completed',
@@ -76,9 +98,9 @@ export async function completePayrollRun(payrollRunId: string, workerResults: st
 
   // Mark pay period as paid
   await prisma.payPeriod.update({
-    where: { id: run.pay_period_id },
+    where: { id: updated.pay_period_id },
     data: { status: 'paid' },
   });
 
-  return run;
+  return updated;
 }

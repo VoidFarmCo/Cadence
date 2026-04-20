@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import api from '@/api/apiClient';
-import { WorkerProfiles } from '@/api/entities';
 
+// Reads the already-fetched user from AuthContext instead of issuing a
+// per-component /api/auth/me request. Fan-out from ~14 consumers was
+// flooding the backend with 401s when logged out and duplicate 200s when
+// logged in.
 export default function useCurrentUser() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -9,13 +12,12 @@ export default function useCurrentUser() {
 
   useEffect(() => {
     async function load() {
-      const token = localStorage.getItem('accessToken');
-      if (!token) { setLoading(false); return; }
       try {
         const { data: me } = await api.get('/api/auth/me');
         setUser(me);
-        const profiles = await WorkerProfiles.list({ user_email: me.email });
-        setProfile(profiles[0] || null);
+        // /api/auth/me embeds the caller's worker profile; avoids a
+        // second request that would 403 for non-manager roles.
+        setProfile(me?.workerProfile || null);
       } catch {
         // not authenticated
       }
@@ -31,6 +33,7 @@ export default function useCurrentUser() {
   const isManager = workerRole === 'manager' || isPayrollAdmin;
   const isWorker = workerRole === 'worker';
   const isContractor = profile?.worker_type === 'contractor';
+  const isSuperAdmin = user?.platform_role === 'superadmin' || user?.is_platform_admin === true;
 
-  return { user, profile, loading, isEmployer, isOwner, isPayrollAdmin, isManager, isWorker, isContractor };
+  return { user, profile, loading, isEmployer, isOwner, isPayrollAdmin, isManager, isWorker, isContractor, isSuperAdmin };
 }

@@ -6,6 +6,7 @@ import { requireMinRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { AuthRequest, qs } from '../types';
 import { createAuditLog } from '../services/audit.service';
+import { getCompanyId, parsePagination, paginatedResponse } from '../lib/company';
 
 const router = Router();
 
@@ -15,7 +16,11 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const worker_email = qs(req.query.worker_email);
     const status = qs(req.query.status);
     const leave_type = qs(req.query.leave_type);
-    const where: any = {};
+
+    const companyId = await getCompanyId(req.user!.email);
+    if (!companyId) { res.json(paginatedResponse([], 0, 1, 50)); return; }
+
+    const where: any = { company_id: companyId };
 
     if (req.user!.role === 'worker') {
       where.worker_email = req.user!.email;
@@ -26,11 +31,17 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     if (status) where.status = status;
     if (leave_type) where.leave_type = leave_type;
 
-    const requests = await prisma.leaveRequest.findMany({
-      where,
-      orderBy: { created_at: 'desc' },
+    const { skip, take, page, limit } = parsePagination({
+      page: qs(req.query.page),
+      limit: qs(req.query.limit),
     });
-    res.json(requests);
+
+    const [requests, total] = await Promise.all([
+      prisma.leaveRequest.findMany({ where, orderBy: { created_at: 'desc' }, skip, take }),
+      prisma.leaveRequest.count({ where }),
+    ]);
+
+    res.json(paginatedResponse(requests, total, page, limit));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch leave requests' });
   }
@@ -39,17 +50,20 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 // Get single leave request
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const request = await prisma.leaveRequest.findUnique({ where: { id: req.params.id } });
     if (!request) {
       res.status(404).json({ error: 'Leave request not found' });
       return;
     }
-
+    if (!companyId || request.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
     if (req.user!.role === 'worker' && request.worker_email !== req.user!.email) {
       res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
-
     res.json(request);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch leave request' });
@@ -68,6 +82,7 @@ const createLeaveRequestSchema = z.object({
 
 router.post('/', authenticate, validate(createLeaveRequestSchema), async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const workerProfile = await prisma.workerProfile.findFirst({
       where: { user_email: req.user!.email },
     });
@@ -79,6 +94,7 @@ router.post('/', authenticate, validate(createLeaveRequestSchema), async (req: A
         worker_name: workerProfile?.full_name || req.user!.email,
         start_date: new Date(req.body.start_date),
         end_date: new Date(req.body.end_date),
+        company_id: companyId,
       },
     });
 
@@ -101,9 +117,18 @@ router.post(
   validate(reviewLeaveSchema),
   async (req: AuthRequest, res: Response) => {
     try {
+      const companyId = await getCompanyId(req.user!.email);
       const existing = await prisma.leaveRequest.findUnique({ where: { id: req.params.id } });
       if (!existing) {
         res.status(404).json({ error: 'Leave request not found' });
+        return;
+      }
+      if (!companyId || existing.company_id !== companyId) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+      if (existing.status !== 'pending') {
+        res.status(400).json({ error: 'Can only review pending leave requests' });
         return;
       }
 
@@ -141,6 +166,7 @@ router.post(
         entityId: existing.id,
         performedBy: req.user!.userId,
         reason: req.body.denial_reason,
+        companyId,
       });
 
       res.json(updated);
@@ -153,22 +179,24 @@ router.post(
 // Delete leave request
 router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const companyId = await getCompanyId(req.user!.email);
     const request = await prisma.leaveRequest.findUnique({ where: { id: req.params.id } });
     if (!request) {
       res.status(404).json({ error: 'Leave request not found' });
       return;
     }
-
+    if (!companyId || request.company_id !== companyId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
     if (req.user!.role === 'worker' && request.worker_email !== req.user!.email) {
       res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
-
     if (request.status !== 'pending') {
       res.status(400).json({ error: 'Can only delete pending requests' });
       return;
     }
-
     await prisma.leaveRequest.delete({ where: { id: req.params.id } });
     res.json({ message: 'Leave request deleted' });
   } catch (error) {

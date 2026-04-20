@@ -6,8 +6,10 @@ import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { env } from '../config/env';
-import { AuthRequest, VALID_PRICE_IDS } from '../types';
+import { AuthRequest, VALID_PRICE_IDS, STRIPE_PRICE_IDS } from '../types';
 import { createAuditLog } from '../services/audit.service';
+import { sendEmail } from '../services/email.service';
+import { getIO } from '../lib/socket';
 
 const router = Router();
 
@@ -102,27 +104,31 @@ router.post(
           const ownerEmail = session.metadata?.owner_email;
 
           if (accountId) {
-            // Determine plan from the subscription
+            // Build plan and interval mappings from canonical price IDs
             const planMapping: Record<string, string> = {
-              'price_1TMGsDDPghjun5PixSQyO7gs': 'solo',
-              'price_1TMGsDDPghjun5Pizf7LFxjd': 'solo',
-              'price_1TMGsDDPghjun5Pi1KcCN4yt': 'pro',
-              'price_1TMGsDDPghjun5PiynXY1nGn': 'pro',
-              'price_1TMGsDDPghjun5PiCFdTX8Wi': 'business',
-              'price_1TMGsDDPghjun5Pie9vyRaPb': 'business',
-              'price_1TMGwDDPghjun5Pi7Q74Xy9U': 'enterprise',
-              'price_1TMGwDDPghjun5PiBFsszW9I': 'enterprise',
+              [STRIPE_PRICE_IDS.solo_month]:         'solo',
+              [STRIPE_PRICE_IDS.solo_year]:          'solo',
+              [STRIPE_PRICE_IDS.pro_month]:          'pro',
+              [STRIPE_PRICE_IDS.pro_year]:           'pro',
+              [STRIPE_PRICE_IDS.business_month]:     'business',
+              [STRIPE_PRICE_IDS.business_year]:      'business',
+              [STRIPE_PRICE_IDS.business_pro_month]: 'business_pro',
+              [STRIPE_PRICE_IDS.business_pro_year]:  'business_pro',
+              [STRIPE_PRICE_IDS.enterprise_month]:   'enterprise',
+              [STRIPE_PRICE_IDS.enterprise_year]:    'enterprise',
             };
 
             const intervalMapping: Record<string, string> = {
-              'price_1TMGsDDPghjun5PixSQyO7gs': 'month',
-              'price_1TMGsDDPghjun5Pizf7LFxjd': 'year',
-              'price_1TMGsDDPghjun5Pi1KcCN4yt': 'month',
-              'price_1TMGsDDPghjun5PiynXY1nGn': 'year',
-              'price_1TMGsDDPghjun5PiCFdTX8Wi': 'month',
-              'price_1TMGsDDPghjun5Pie9vyRaPb': 'year',
-              'price_1TMGwDDPghjun5Pi7Q74Xy9U': 'month',
-              'price_1TMGwDDPghjun5PiBFsszW9I': 'year',
+              [STRIPE_PRICE_IDS.solo_month]:         'month',
+              [STRIPE_PRICE_IDS.solo_year]:          'year',
+              [STRIPE_PRICE_IDS.pro_month]:          'month',
+              [STRIPE_PRICE_IDS.pro_year]:           'year',
+              [STRIPE_PRICE_IDS.business_month]:     'month',
+              [STRIPE_PRICE_IDS.business_year]:      'year',
+              [STRIPE_PRICE_IDS.business_pro_month]: 'month',
+              [STRIPE_PRICE_IDS.business_pro_year]:  'year',
+              [STRIPE_PRICE_IDS.enterprise_month]:   'month',
+              [STRIPE_PRICE_IDS.enterprise_year]:    'year',
             };
 
             // Fetch the subscription to get the price ID
@@ -147,6 +153,7 @@ router.post(
                 lock_reason: null,
               },
             });
+            try { getIO().emit('account:updated', { id: accountId }); } catch {}
           }
           break;
         }
@@ -157,9 +164,11 @@ router.post(
             where: { stripe_subscription_id: subscription.id },
             data: {
               stripe_subscription_status: subscription.status,
-              status: subscription.status === 'active' ? 'active' : undefined,
+              ...(subscription.status === 'active' ? { status: 'active' } : {}),
+              ...(subscription.status === 'past_due' || subscription.status === 'unpaid' ? { status: 'locked', lock_reason: 'payment_failed' } : {}),
             },
           });
+          try { getIO().emit('account:updated', { subscription_id: subscription.id }); } catch {}
           break;
         }
 
@@ -172,19 +181,36 @@ router.post(
               stripe_subscription_status: 'canceled',
             },
           });
+          try { getIO().emit('account:updated', { subscription_id: subscription.id }); } catch {}
           break;
         }
 
         case 'invoice.payment_failed': {
           const invoice = event.data.object as any;
           if (invoice.subscription) {
-            await prisma.account.updateMany({
+            const account = await prisma.account.findFirst({
               where: { stripe_subscription_id: invoice.subscription },
-              data: {
-                status: 'locked',
-                lock_reason: 'payment_failed',
-              },
             });
+            if (account) {
+              await prisma.account.update({
+                where: { id: account.id },
+                data: { status: 'locked', lock_reason: 'payment_failed' },
+              });
+              try { getIO().emit('account:updated', { id: account.id }); } catch {}
+              try {
+                await sendEmail(
+                  account.owner_email,
+                  'Action required: Payment failed for Cadence',
+                  `<h2>Your Cadence payment failed</h2>
+                <p>Hi ${account.owner_name},</p>
+                <p>We were unable to process your payment. Your account has been locked.</p>
+                <p>Please update your billing information to restore access:</p>
+                <p><a href="${env.APP_URL}/billing" style="padding:12px 24px;background:#2563eb;color:white;text-decoration:none;border-radius:6px;">Update Billing</a></p>`
+                );
+              } catch (emailErr) {
+                console.error('Failed to send payment failure email:', emailErr);
+              }
+            }
           }
           break;
         }

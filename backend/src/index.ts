@@ -1,5 +1,9 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import jwt from 'jsonwebtoken';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 import { env } from './config/env';
@@ -26,34 +30,89 @@ import workerDocumentRoutes from './routes/workerDocuments';
 import auditLogRoutes from './routes/auditLogs';
 import stripeRoutes from './routes/stripe';
 import reportRoutes from './routes/reports';
+import adminRoutes from './routes/admin';
+import { processTrialReminders } from './services/trial.service';
+import { promoteSuperAdmin } from './services/superadmin.service';
 
 const app = express();
 const server = createServer(app);
 
 // ─── Socket.io Setup ────────────────────────────────────────────────────────
 
+const ALLOWED_ORIGINS = [env.APP_URL, env.APP_URL.replace('https://', 'https://www.')];
+
 const io = new SocketServer(server, {
   cors: {
-    origin: env.APP_URL,
+    origin: ALLOWED_ORIGINS,
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
 
 initSocket(io);
 
-io.on('connection', (socket) => {
-  console.log(`Socket connected: ${socket.id}`);
-  socket.on('disconnect', () => {
-    console.log(`Socket disconnected: ${socket.id}`);
-  });
+io.use((socket, next) => {
+  // Accept token from cookie or auth handshake
+  const cookieHeader = socket.handshake.headers.cookie || '';
+  const cookieToken = cookieHeader.split(';').find(c => c.trim().startsWith('accessToken='))?.split('=')[1];
+  const token = cookieToken || socket.handshake.auth.token;
+  if (!token) return next(new Error('Authentication required'));
+  try {
+    const decoded = jwt.verify(token, env.JWT_SECRET);
+    (socket as any).user = decoded;
+    next();
+  } catch {
+    next(new Error('Invalid token'));
+  }
+});
+
+io.on('connection', async (socket) => {
+  const user = (socket as any).user;
+  if (user?.email) {
+    // Look up the user's company and join them to a company-scoped room
+    try {
+      const { getCompanyId } = await import('./lib/company');
+      const companyId = await getCompanyId(user.email);
+      if (companyId) {
+        socket.join(`company:${companyId}`);
+      }
+    } catch {}
+  }
+  socket.on('disconnect', () => {});
 });
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
 
+// Railway (and most PaaS) sit behind a reverse proxy — trust the first hop
+// so express-rate-limit can read the real client IP from X-Forwarded-For.
+app.set('trust proxy', 1);
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false, // API only — no HTML served
+}));
+
 app.use(cors({
-  origin: env.APP_URL,
+  origin: ALLOWED_ORIGINS,
   credentials: true,
 }));
+
+// Rate limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
+});
+
+const strictLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
+});
 
 // Stripe webhook needs raw body — mount before json parser
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
@@ -61,6 +120,7 @@ app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 // JSON parser for everything else
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // ─── Health Check ───────────────────────────────────────────────────────────
 
@@ -74,6 +134,10 @@ app.get('/api/health', (_req, res) => {
 
 // ─── Routes ─────────────────────────────────────────────────────────────────
 
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', strictLimiter);
+app.use('/api/auth/reset-password', strictLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/api/companies', companyRoutes);
@@ -93,18 +157,35 @@ app.use('/api/worker-documents', workerDocumentRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/admin', adminRoutes);
 
 // ─── Error Handler (must be last) ──────────────────────────────────────────
 
 app.use(errorHandler);
 
+// ─── Trial Reminder Cron (runs every 6 hours) ────────────────────────────────
+
+setInterval(async () => {
+  try {
+    const result = await processTrialReminders();
+    if (result.reminded > 0 || result.locked > 0) {
+      console.log(`Trial cron: ${result.reminded} reminded, ${result.locked} locked`);
+    }
+  } catch (err) {
+    console.error('Trial cron error:', err);
+  }
+}, 6 * 60 * 60 * 1000); // every 6 hours
+
 // ─── Start Server ───────────────────────────────────────────────────────────
 
 const PORT = parseInt(env.PORT, 10);
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log(`Cadence API running on port ${PORT}`);
   console.log(`Environment: ${env.NODE_ENV}`);
+
+  // Auto-promote superadmin user on startup if SUPERADMIN_EMAIL is set
+  await promoteSuperAdmin();
 });
 
 export default app;

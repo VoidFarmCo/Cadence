@@ -1,4 +1,4 @@
-import { ArrowLeft, Clock, FileText, DollarSign, Users, CheckCircle2, Menu, LogOut, Settings, BarChart3, ArrowRight, Share2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Menu, LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
@@ -23,7 +23,7 @@ export default function AppPreview() {
           </div>
         </div>
         {/* Screen content */}
-        <div className="bg-background rounded-2xl overflow-hidden h-96">
+        <div className="bg-background rounded-2xl overflow-y-auto h-96">
           {children}
         </div>
       </div>
@@ -185,7 +185,6 @@ export default function AppPreview() {
                     <h3 className="font-bold">My Team</h3>
                     <Menu className="w-5 h-5" />
                   </div>
-
                   <div className="bg-secondary rounded-lg p-3 text-sm">
                     <p className="font-semibold mb-2">Approvals Waiting</p>
                     <div className="space-y-1 text-xs">
@@ -199,28 +198,24 @@ export default function AppPreview() {
                       </div>
                     </div>
                   </div>
-
                   <Button className="w-full" size="sm" onClick={() => setSelectedManager('timesheets')}>Review Timesheets</Button>
-
                   <div className="bg-secondary rounded-lg p-3 text-xs mt-2">
                     <p className="font-semibold mb-1">Team Hours This Week</p>
                     <p className="text-lg font-bold">156 hrs</p>
                   </div>
-
                   <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedManager('schedule')}>Team Schedule</Button>
                   <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedManager('timeoff')}>Time Off Requests</Button>
-
-                  {selectedManager && (
-                    <div className="mt-2 p-2 bg-secondary rounded text-xs border-l-2 border-primary">
-                      <p className="font-semibold">
-                        {selectedManager === 'timesheets' && '✅ Review Timesheets'}
-                        {selectedManager === 'schedule' && '📅 Team Schedule'}
-                        {selectedManager === 'timeoff' && '🏖️ Time Off Requests'}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </PhoneMockup>
+              {selectedManager && (
+                <div className="mt-3 p-3 bg-secondary rounded-lg text-sm border-l-4 border-primary">
+                  <p className="font-semibold">
+                    {selectedManager === 'timesheets' && '✅ Review Timesheets — Approve or reject submitted time entries'}
+                    {selectedManager === 'schedule' && '📅 Team Schedule — View and manage upcoming shifts'}
+                    {selectedManager === 'timeoff' && '🏖️ Time Off Requests — Review pending leave requests'}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Employee */}
@@ -233,7 +228,6 @@ export default function AppPreview() {
                     <h3 className="font-bold">Today</h3>
                     <Menu className="w-5 h-5" />
                   </div>
-
                   <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-6 rounded-2xl text-center">
                     <p className="text-xs opacity-90 mb-1">Current Time</p>
                     <p className="text-4xl font-bold mb-3">09:42</p>
@@ -241,7 +235,6 @@ export default function AppPreview() {
                       Clock Out
                     </Button>
                   </div>
-
                   <div className="grid grid-cols-3 gap-2 text-xs text-center">
                     <div className="bg-secondary p-2 rounded-lg">
                       <p className="opacity-70">This Week</p>
@@ -256,22 +249,20 @@ export default function AppPreview() {
                       <p className="font-bold">12 hrs</p>
                     </div>
                   </div>
-
                   <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedWorker('timesheet')}>View Timesheet</Button>
                   <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedWorker('timeoff')}>Request Time Off</Button>
                   <Button variant="outline" className="w-full" size="sm" onClick={() => setSelectedWorker('tax')}>Tax Forms</Button>
-
-                  {selectedWorker && (
-                    <div className="mt-2 p-2 bg-secondary rounded text-xs border-l-2 border-primary">
-                      <p className="font-semibold">
-                        {selectedWorker === 'timesheet' && '⏱️ View Timesheet'}
-                        {selectedWorker === 'timeoff' && '🏖️ Request Time Off'}
-                        {selectedWorker === 'tax' && '📄 Tax Forms'}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </PhoneMockup>
+              {selectedWorker && (
+                <div className="mt-3 p-3 bg-secondary rounded-lg text-sm border-l-4 border-primary">
+                  <p className="font-semibold">
+                    {selectedWorker === 'timesheet' && '⏱️ View Timesheet — See daily and weekly hour breakdowns'}
+                    {selectedWorker === 'timeoff' && '🏖️ Request Time Off — Submit PTO or sick leave requests'}
+                    {selectedWorker === 'tax' && '📄 Tax Forms — Complete and submit required tax documents'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </section>
