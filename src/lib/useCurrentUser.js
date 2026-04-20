@@ -1,13 +1,30 @@
-import { useAuth } from '@/lib/AuthContext';
+import { useState, useEffect } from 'react';
+import api from '@/api/apiClient';
 
 // Reads the already-fetched user from AuthContext instead of issuing a
 // per-component /api/auth/me request. Fan-out from ~14 consumers was
 // flooding the backend with 401s when logged out and duplicate 200s when
 // logged in.
 export default function useCurrentUser() {
-  const { user, isLoadingAuth } = useAuth();
-  const profile = user?.workerProfile || null;
-  const loading = isLoadingAuth;
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const { data: me } = await api.get('/api/auth/me');
+        setUser(me);
+        // /api/auth/me embeds the caller's worker profile; avoids a
+        // second request that would 403 for non-manager roles.
+        setProfile(me?.workerProfile || null);
+      } catch {
+        // not authenticated
+      }
+      setLoading(false);
+    }
+    load();
+  }, []);
 
   const workerRole = profile?.role; // 'owner' | 'payroll_admin' | 'manager' | 'worker'
   const isEmployer = ['owner', 'payroll_admin', 'manager'].includes(workerRole);
