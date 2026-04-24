@@ -6,7 +6,7 @@ import { authenticate } from '../middleware/auth';
 import { requireMinRole } from '../middleware/rbac';
 import { AuthRequest } from '../types';
 import { createAuditLog } from '../services/audit.service';
-import { sendInviteEmail, sendPasswordResetEmail, buildInviteUrl, isEmailConfigured } from '../services/email.service';
+import { sendPasswordResetEmail, buildInviteUrl } from '../services/email.service';
 import {
   hashPassword,
   comparePassword,
@@ -296,6 +296,13 @@ const inviteSchema = z.object({
   role: z.enum(['payroll_admin', 'manager', 'worker']),
 });
 
+const ROLE_RANK: Record<'owner' | 'payroll_admin' | 'manager' | 'worker', number> = {
+  owner: 4,
+  payroll_admin: 3,
+  manager: 2,
+  worker: 1,
+};
+
 router.post(
   '/invite',
   authenticate,
@@ -304,6 +311,15 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const { email, full_name, role } = req.body;
+
+      // Prevent lateral / upward privilege escalation: the caller cannot
+      // invite a user whose role is equal to or above their own.
+      if (ROLE_RANK[role as keyof typeof ROLE_RANK] >= ROLE_RANK[req.user!.role]) {
+        res.status(403).json({
+          error: 'You cannot invite a user with a role equal to or above your own.',
+        });
+        return;
+      }
 
       const existing = await prisma.user.findUnique({ where: { email } });
       if (existing) {
@@ -320,40 +336,18 @@ router.post(
         companyId
       );
 
-      const inviteUrl = buildInviteUrl(inviteToken);
-      let emailSent = false;
-      let emailError: string | undefined;
-
-      if (!isEmailConfigured()) {
-        emailError =
-          'Email is not configured on the server. Copy the invite link below and share it with the user.';
-      } else {
-        try {
-          await sendInviteEmail(email, full_name, inviteToken);
-          emailSent = true;
-        } catch (err: any) {
-          console.error('Failed to send invite email:', err);
-          emailError =
-            err?.message
-              ? `Failed to send invite email: ${err.message}. Copy the invite link below and share it manually.`
-              : 'Failed to send invite email. Copy the invite link below and share it manually.';
-        }
-      }
-
       await createAuditLog({
         action: 'invite',
         entityType: 'user',
         entityId: user.id,
         performedBy: req.user!.userId,
-        details: `Invited ${email} as ${role}${emailSent ? '' : ' (email delivery failed)'}`,
+        details: `Invited ${email} as ${role}`,
       });
 
       res.status(201).json({
-        message: emailSent ? 'Invite sent' : 'User created but invite email failed to send',
+        message: 'Invite created',
         userId: user.id,
-        emailSent,
-        inviteUrl,
-        ...(emailError ? { emailError } : {}),
+        inviteUrl: buildInviteUrl(inviteToken),
       });
     } catch (error) {
       console.error('Failed to send invite:', error);

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { UserPlus, Search, Copy, AlertTriangle } from 'lucide-react';
+import { UserPlus, Search, Copy, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import WorkerDetailModal from '@/components/documents/WorkerDetailModal';
 
@@ -19,10 +19,9 @@ export default function People() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [form, setForm] = useState({ full_name: '', user_email: '', phone: '', worker_type: 'employee', role: 'worker', pay_rate: '' });
-  // Populated when the backend creates the user but the invite email fails
-  // (e.g. SMTP not configured). Shows the accept-invite link so the admin
-  // can copy and share it manually.
-  const [emailFallback, setEmailFallback] = useState(null); // { fullName, email, inviteUrl, reason }
+  // Invites no longer send email — the backend always returns an invite
+  // link that the admin copies and shares manually (chat, SMS, etc.).
+  const [invitePopup, setInvitePopup] = useState(null); // { fullName, email, inviteUrl }
   const [submittingInvite, setSubmittingInvite] = useState(false);
 
   useEffect(() => {
@@ -64,16 +63,11 @@ export default function People() {
       setForm({ full_name: '', user_email: '', phone: '', worker_type: 'employee', role: 'worker', pay_rate: '' });
       loadWorkers();
 
-      if (res?.emailSent) {
-        toast.success(`Invite emailed to ${invitedEmail}`);
-      } else if (res?.inviteUrl) {
-        // Email failed or SMTP is not configured; surface the link so the
-        // admin can still deliver the invite manually.
-        setEmailFallback({
+      if (res?.inviteUrl) {
+        setInvitePopup({
           fullName: invitedName,
           email: invitedEmail,
           inviteUrl: res.inviteUrl,
-          reason: res.emailError || 'Email delivery failed.',
         });
       } else {
         toast.success(`Invited ${invitedName}`);
@@ -235,32 +229,32 @@ export default function People() {
         onUpdated={() => { setSelectedWorker(null); loadWorkers(); }}
       />
 
-      <Dialog open={!!emailFallback} onOpenChange={(open) => !open && setEmailFallback(null)}>
+      <Dialog open={!!invitePopup} onOpenChange={(open) => !open && setInvitePopup(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-warning" />
-              Invite created, but email was not sent
+              <LinkIcon className="w-5 h-5 text-primary" />
+              Share invite link
             </DialogTitle>
             <DialogDescription>
-              {emailFallback?.reason}
+              Copy the link and send it to the invited user however you like (email, text, chat).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <p className="text-sm text-muted-foreground">
-              The account for <strong>{emailFallback?.fullName}</strong>{' '}
-              (<span className="font-mono">{emailFallback?.email}</span>) was created. Share the
-              link below so they can set their password and join your team. The link expires in 7 days.
+              An account for <strong>{invitePopup?.fullName}</strong>{' '}
+              (<span className="font-mono">{invitePopup?.email}</span>) has been created.
+              They can use this link to set their password and join your team. The link expires in 7 days.
             </p>
             <div className="flex items-center gap-2">
-              <Input readOnly value={emailFallback?.inviteUrl || ''} className="font-mono text-xs" />
-              <Button type="button" variant="outline" onClick={() => copyInviteLink(emailFallback.inviteUrl)}>
+              <Input readOnly value={invitePopup?.inviteUrl || ''} className="font-mono text-xs" />
+              <Button type="button" variant="outline" onClick={() => copyInviteLink(invitePopup.inviteUrl)}>
                 <Copy className="w-4 h-4 mr-2" />
                 Copy
               </Button>
             </div>
             <div className="flex justify-end">
-              <Button onClick={() => setEmailFallback(null)}>Done</Button>
+              <Button onClick={() => setInvitePopup(null)}>Done</Button>
             </div>
           </div>
         </DialogContent>
