@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '@/api/apiClient';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -88,25 +88,39 @@ export default function Billing() {
 
   // Merge backend-provided price IDs into the static UI metadata. Plans
   // without resolved IDs (network failure or slug drift between frontend
-  // metadata and the /api/stripe/plans response) render disabled. Slug
-  // drift is also surfaced as a warning so it gets caught in dev.
-  const PLANS = PLAN_METADATA.map((plan) => {
-    const entry = planPriceIds?.[plan.id];
-    if (planPriceIds && !entry) {
-      console.warn(
-        `Billing: no price IDs returned for plan "${plan.id}". ` +
-          `Check that the slug matches a key in /api/stripe/plans.`
-      );
-    }
-    return {
-      ...plan,
-      monthlyPriceId: entry?.monthlyPriceId,
-      annualPriceId: entry?.annualPriceId,
-    };
-  });
+  // metadata and the /api/stripe/plans response) render disabled.
+  const PLANS = useMemo(
+    () =>
+      PLAN_METADATA.map((plan) => {
+        const entry = planPriceIds?.[plan.id];
+        return {
+          ...plan,
+          monthlyPriceId: entry?.monthlyPriceId,
+          annualPriceId: entry?.annualPriceId,
+        };
+      }),
+    [planPriceIds]
+  );
 
-  const priceIdForInterval = (plan) =>
-    billingInterval === 'monthly' ? plan.monthlyPriceId : plan.annualPriceId;
+  // Surface slug drift as a one-shot warning when the response loads, not
+  // on every render. Catches a frontend plan id that has no matching key
+  // in the /api/stripe/plans response.
+  useEffect(() => {
+    if (!planPriceIds) return;
+    for (const plan of PLAN_METADATA) {
+      if (!planPriceIds[plan.id]) {
+        console.warn(
+          `Billing: no price IDs returned for plan "${plan.id}". ` +
+            `Check that the slug matches a key in /api/stripe/plans.`
+        );
+      }
+    }
+  }, [planPriceIds]);
+
+  const priceIdForInterval = useCallback(
+    (plan) => (billingInterval === 'monthly' ? plan.monthlyPriceId : plan.annualPriceId),
+    [billingInterval]
+  );
 
   async function handleUpgrade(plan) {
     const priceId = priceIdForInterval(plan);
