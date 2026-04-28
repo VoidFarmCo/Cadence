@@ -20,16 +20,16 @@ export interface PaginationQuery {
 }
 
 export const STRIPE_PRICE_IDS: Record<string, string> = {
-  solo_month:         'price_1TMlgW2LZNrR2QMPfaYVOGfP',
-  solo_year:          'price_1TMlgW2LZNrR2QMPBCdtBSQU',
-  pro_month:          'price_1TMlgX2LZNrR2QMPef24FoUJ',
-  pro_year:           'price_1TMlgX2LZNrR2QMPC1K9aM7F',
-  business_month:     'price_1TMlgY2LZNrR2QMPYt0HdyYX',
-  business_year:      'price_1TMlgY2LZNrR2QMPMRvhqohb',
-  business_pro_month: 'price_1TMlgZ2LZNrR2QMPnyeGAs48',
-  business_pro_year:  'price_1TMlgZ2LZNrR2QMPO5ZzSbG5',
-  enterprise_month:   'price_1TMlgZ2LZNrR2QMP54JCUuc4',
-  enterprise_year:    'price_1TMlga2LZNrR2QMPu42QcNuy',
+  solo_month:         'price_1TMNnrDPghjun5PiGhCRtxT6',
+  solo_year:          'price_1TMNnrDPghjun5Pifkhmi6ma',
+  pro_month:          'price_1TMNnrDPghjun5PiMLZ0UpIO',
+  pro_year:           'price_1TMNnrDPghjun5PiZDt9pkoW',
+  business_month:     'price_1TR4qkDPghjun5PieuxOF7Ci',
+  business_year:      'price_1TMNnrDPghjun5PishIEer7e',
+  business_pro_month: 'price_1TMNnrDPghjun5Pie371V6lb',
+  business_pro_year:  'price_1TMNnrDPghjun5Pist2YtIMA',
+  enterprise_month:   'price_1TMNnrDPghjun5PiPnBAzOSS',
+  enterprise_year:    'price_1TMNnrDPghjun5PiYVdeMPu3',
 };
 
 export const VALID_PRICE_IDS = new Set(Object.values(STRIPE_PRICE_IDS));
