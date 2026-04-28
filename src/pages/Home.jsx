@@ -135,9 +135,9 @@ export default function Home() {
         </h2>
         <div className="grid md:grid-cols-3 gap-8">
           {[
-            { name: 'Solo', price: '$10', users: '1 User', features: ['Time Tracking', 'Basic Reports'] },
-            { name: 'Pro', price: '$50', users: '10 Users', features: ['Everything in Solo', 'Team Management', 'Payroll Processing'] },
-            { name: 'Business', price: '$150', users: '50 Users', features: ['Everything in Pro', 'Tax Forms', 'Advanced Analytics'] }
+            { name: 'Solo', price: '$12', users: '1 User', features: ['Time Tracking', 'Basic Reports'] },
+            { name: 'Pro', price: '$49', users: '10 Users', features: ['Everything in Solo', 'Team Management', 'Payroll Processing'] },
+            { name: 'Business', price: '$129', users: '25 Users', features: ['Everything in Pro', 'Tax Forms', 'Advanced Analytics'] }
           ].map((plan, i) => (
             <Card key={i} className={`p-8 ${i === 1 ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
               <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>

@@ -254,7 +254,7 @@ export default function Billing() {
           <strong className="text-foreground">30-day free trial</strong> on all plans. Cancel anytime. Payments secured by Stripe.
         </p>
         <p className="text-xs text-muted-foreground">
-          Save 20% when billed annually. Pricing shown is per user/month.
+          Save 2 months when billed annually. Pricing is per plan.
         </p>
       </div>
     </div>
