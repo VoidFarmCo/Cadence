@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import api from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,9 @@ import { Card } from '@/components/ui/card';
 export default function Login() {
   const { login, register, isAuthenticated, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState('login'); // 'login' | 'register' | 'forgot'
+  const [searchParams] = useSearchParams();
+  const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login';
+  const [mode, setMode] = useState(initialMode); // 'login' | 'register' | 'forgot'
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);

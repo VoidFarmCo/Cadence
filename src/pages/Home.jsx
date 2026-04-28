@@ -1,12 +1,26 @@
 import { useNavigate } from 'react-router-dom';
+import { track } from '@vercel/analytics';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CheckCircle2, Clock, FileText, DollarSign, Users, MapPin, ArrowRight } from 'lucide-react';
 
 export default function Home() {
   const navigate = useNavigate();
-  const handleSignIn = () => {
+  const handleSignIn = (source) => {
+    track('cta_sign_in', source ? { source } : undefined);
     navigate('/login');
+  };
+  const handleGetStarted = (source) => {
+    track('cta_get_started', source ? { source } : undefined);
+    navigate('/login?mode=register');
+  };
+  const handleChoosePlan = (planName) => {
+    track('cta_choose_plan', { plan: planName });
+    navigate(`/login?mode=register&plan=${encodeURIComponent(planName)}`);
+  };
+  const handleSeeHowItWorks = (source) => {
+    track('cta_see_how_it_works', source ? { source } : undefined);
+    navigate('/app-preview');
   };
 
   return (
@@ -18,7 +32,7 @@ export default function Home() {
             <img src="/cadence-logo.png" alt="Cadence" className="w-8 h-8 object-contain" />
             <span className="font-display font-bold text-xl text-primary">Cadence</span>
           </div>
-          <Button onClick={handleSignIn} variant="default">
+          <Button onClick={() => handleSignIn('nav')} variant="default">
             Sign In
           </Button>
         </div>
@@ -35,11 +49,11 @@ export default function Home() {
               Track time, manage payroll, handle tax forms, and keep your team organized—all in one platform. Built for modern workforce management.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button onClick={handleSignIn} size="lg" className="gap-2">
+              <Button onClick={() => handleGetStarted('hero')} size="lg" className="gap-2">
                 Get Started Free
                 <ArrowRight className="w-5 h-5" />
               </Button>
-              <Button onClick={() => navigate('/app-preview')} size="lg" variant="outline">
+              <Button onClick={() => handleSeeHowItWorks('hero')} size="lg" variant="outline">
                 See How It Works
               </Button>
             </div>
@@ -137,7 +151,11 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <Button className="w-full" variant={i === 1 ? 'default' : 'outline'}>
+              <Button
+                onClick={() => handleChoosePlan(plan.name)}
+                className="w-full"
+                variant={i === 1 ? 'default' : 'outline'}
+              >
                 Choose Plan
               </Button>
             </Card>
@@ -153,11 +171,11 @@ export default function Home() {
             Join companies managing thousands of workers with Cadence. Start your 30-day free trial today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button onClick={handleSignIn} size="lg" className="gap-2">
+            <Button onClick={() => handleGetStarted('cta')} size="lg" className="gap-2">
               Get Started Free
               <ArrowRight className="w-5 h-5" />
             </Button>
-            <Button onClick={() => navigate('/app-preview')} size="lg" variant="outline">
+            <Button onClick={() => handleSeeHowItWorks('cta')} size="lg" variant="outline">
               Explore Features
             </Button>
           </div>
