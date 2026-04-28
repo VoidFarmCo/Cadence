@@ -13,6 +13,23 @@ import { getIO } from '../lib/socket';
 
 const router = Router();
 
+// ─── List plan price IDs ────────────────────────────────────────────────────
+//
+// The frontend Billing UI calls this on mount so the price IDs come from
+// the same source the checkout endpoint validates against. Without this,
+// the IDs were duplicated in the React bundle and could drift from the
+// backend's canonical map.
+
+router.get('/plans', authenticate, (_req: AuthRequest, res: Response) => {
+  res.json({
+    solo:         { monthlyPriceId: STRIPE_PRICE_IDS.solo_month,         annualPriceId: STRIPE_PRICE_IDS.solo_year },
+    pro:          { monthlyPriceId: STRIPE_PRICE_IDS.pro_month,          annualPriceId: STRIPE_PRICE_IDS.pro_year },
+    business:     { monthlyPriceId: STRIPE_PRICE_IDS.business_month,     annualPriceId: STRIPE_PRICE_IDS.business_year },
+    business_pro: { monthlyPriceId: STRIPE_PRICE_IDS.business_pro_month, annualPriceId: STRIPE_PRICE_IDS.business_pro_year },
+    enterprise:   { monthlyPriceId: STRIPE_PRICE_IDS.enterprise_month,   annualPriceId: STRIPE_PRICE_IDS.enterprise_year },
+  });
+});
+
 // ─── Create Checkout Session ────────────────────────────────────────────────
 
 const checkoutSchema = z.object({

@@ -5,14 +5,14 @@ import { Button } from '@/components/ui/button';
 import { CreditCard, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const PLANS = [
+// UI metadata only — price IDs are loaded at runtime from /api/stripe/plans
+// so the backend remains the single source of truth.
+const PLAN_METADATA = [
   {
     id: 'solo',
     name: 'Solo',
     monthlyPrice: 12,
     annualPrice: 120,
-    monthlyPriceId: 'price_1TMNnrDPghjun5PiGhCRtxT6',
-    annualPriceId: 'price_1TMNnrDPghjun5Pifkhmi6ma',
     description: '1 user',
     features: ['1 user account', 'GPS time clock', 'Basic reporting', 'Tax forms'],
   },
@@ -21,8 +21,6 @@ const PLANS = [
     name: 'Pro',
     monthlyPrice: 49,
     annualPrice: 490,
-    monthlyPriceId: 'price_1TMNnrDPghjun5PiMLZ0UpIO',
-    annualPriceId: 'price_1TMNnrDPghjun5PiZDt9pkoW',
     description: 'Up to 10 users',
     features: ['Everything in Solo', 'Team management', 'Payroll runs', 'Scheduling'],
     popular: true,
@@ -32,8 +30,6 @@ const PLANS = [
     name: 'Business',
     monthlyPrice: 129,
     annualPrice: 1290,
-    monthlyPriceId: 'price_1TR4qkDPghjun5PieuxOF7Ci',
-    annualPriceId: 'price_1TMNnrDPghjun5PishIEer7e',
     description: 'Up to 25 users',
     features: ['Everything in Pro', 'Advanced analytics', 'Priority support'],
   },
@@ -42,8 +38,6 @@ const PLANS = [
     name: 'Business Pro',
     monthlyPrice: 300,
     annualPrice: 3000,
-    monthlyPriceId: 'price_1TMNnrDPghjun5Pie371V6lb',
-    annualPriceId: 'price_1TMNnrDPghjun5Pist2YtIMA',
     description: 'Up to 50 users',
     features: ['Everything in Business', 'Custom integrations', 'Dedicated support'],
   },
@@ -52,8 +46,6 @@ const PLANS = [
     name: 'Enterprise',
     monthlyPrice: 500,
     annualPrice: 5000,
-    monthlyPriceId: 'price_1TMNnrDPghjun5PiPnBAzOSS',
-    annualPriceId: 'price_1TMNnrDPghjun5PiYVdeMPu3',
     description: 'Unlimited users',
     features: ['Everything in Business Pro', 'Unlimited users', 'Custom contract', 'Dedicated account manager'],
   },
@@ -64,6 +56,7 @@ export default function Billing() {
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(null);
   const [billingInterval, setBillingInterval] = useState('monthly');
+  const [planPriceIds, setPlanPriceIds] = useState(null);
 
   useEffect(() => {
     // Show feedback after Stripe redirect
@@ -78,8 +71,12 @@ export default function Billing() {
 
     async function load() {
       try {
-        const accountData = await api.get('/api/accounts').then(r => r.data);
+        const [accountData, planData] = await Promise.all([
+          api.get('/api/accounts').then(r => r.data),
+          api.get('/api/stripe/plans').then(r => r.data),
+        ]);
         setAccount(accountData || null);
+        setPlanPriceIds(planData || null);
       } catch (err) {
         console.error('Failed to load billing data:', err);
       } finally {
@@ -89,10 +86,22 @@ export default function Billing() {
     load();
   }, []);
 
+  // Merge backend-provided price IDs into the static UI metadata. Plans
+  // without resolved IDs (network failure) render disabled.
+  const PLANS = PLAN_METADATA.map((plan) => ({
+    ...plan,
+    monthlyPriceId: planPriceIds?.[plan.id]?.monthlyPriceId,
+    annualPriceId: planPriceIds?.[plan.id]?.annualPriceId,
+  }));
+
   async function handleUpgrade(plan) {
+    const priceId = billingInterval === 'monthly' ? plan.monthlyPriceId : plan.annualPriceId;
+    if (!priceId) {
+      toast.error('Plan unavailable — could not load price. Refresh and try again.');
+      return;
+    }
     setCheckoutLoading(plan.id);
     try {
-      const priceId = billingInterval === 'monthly' ? plan.monthlyPriceId : plan.annualPriceId;
       const { data } = await api.post('/api/stripe/create-checkout', { price_id: priceId });
       if (!data.url) throw new Error('No checkout URL returned');
       window.location.href = data.url;
@@ -233,7 +242,7 @@ export default function Billing() {
               <Button
                 className="w-full"
                 variant={isCurrent ? 'secondary' : plan.popular ? 'default' : 'outline'}
-                disabled={isCurrent || checkoutLoading === plan.id}
+                disabled={isCurrent || checkoutLoading === plan.id || !plan.monthlyPriceId}
                 onClick={() => !isCurrent && handleUpgrade(plan)}
               >
                 {checkoutLoading === plan.id ? (
