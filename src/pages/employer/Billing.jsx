@@ -102,19 +102,19 @@ export default function Billing() {
     [planPriceIds]
   );
 
-  // Surface slug drift as a one-shot warning when the response loads, not
-  // on every render. Catches a frontend plan id that has no matching key
-  // in the /api/stripe/plans response.
+  // Surface slug drift as a single warning per response. Aggregates every
+  // frontend plan id that has no matching key in /api/stripe/plans so a
+  // multi-slug rename doesn't spam the console.
   useEffect(() => {
     if (!planPriceIds) return;
-    for (const plan of PLAN_METADATA) {
-      if (!planPriceIds[plan.id]) {
-        console.warn(
-          `Billing: no price IDs returned for plan "${plan.id}". ` +
-            `Check that the slug matches a key in /api/stripe/plans.`
-        );
-      }
-    }
+    const missing = PLAN_METADATA
+      .filter((plan) => !planPriceIds[plan.id])
+      .map((plan) => plan.id);
+    if (missing.length === 0) return;
+    console.warn(
+      `Billing: no price IDs returned for plan(s): ${missing.join(', ')}. ` +
+        `Check that each slug matches a key in /api/stripe/plans.`
+    );
   }, [planPriceIds]);
 
   const priceIdForInterval = useCallback(
