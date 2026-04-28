@@ -87,15 +87,29 @@ export default function Billing() {
   }, []);
 
   // Merge backend-provided price IDs into the static UI metadata. Plans
-  // without resolved IDs (network failure) render disabled.
-  const PLANS = PLAN_METADATA.map((plan) => ({
-    ...plan,
-    monthlyPriceId: planPriceIds?.[plan.id]?.monthlyPriceId,
-    annualPriceId: planPriceIds?.[plan.id]?.annualPriceId,
-  }));
+  // without resolved IDs (network failure or slug drift between frontend
+  // metadata and the /api/stripe/plans response) render disabled. Slug
+  // drift is also surfaced as a warning so it gets caught in dev.
+  const PLANS = PLAN_METADATA.map((plan) => {
+    const entry = planPriceIds?.[plan.id];
+    if (planPriceIds && !entry) {
+      console.warn(
+        `Billing: no price IDs returned for plan "${plan.id}". ` +
+          `Check that the slug matches a key in /api/stripe/plans.`
+      );
+    }
+    return {
+      ...plan,
+      monthlyPriceId: entry?.monthlyPriceId,
+      annualPriceId: entry?.annualPriceId,
+    };
+  });
+
+  const priceIdForInterval = (plan) =>
+    billingInterval === 'monthly' ? plan.monthlyPriceId : plan.annualPriceId;
 
   async function handleUpgrade(plan) {
-    const priceId = billingInterval === 'monthly' ? plan.monthlyPriceId : plan.annualPriceId;
+    const priceId = priceIdForInterval(plan);
     if (!priceId) {
       toast.error('Plan unavailable — could not load price. Refresh and try again.');
       return;
@@ -242,7 +256,7 @@ export default function Billing() {
               <Button
                 className="w-full"
                 variant={isCurrent ? 'secondary' : plan.popular ? 'default' : 'outline'}
-                disabled={isCurrent || checkoutLoading === plan.id || !plan.monthlyPriceId}
+                disabled={isCurrent || checkoutLoading === plan.id || !priceIdForInterval(plan)}
                 onClick={() => !isCurrent && handleUpgrade(plan)}
               >
                 {checkoutLoading === plan.id ? (
