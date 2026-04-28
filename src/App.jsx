@@ -10,6 +10,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import SuperAdminRoute from '@/components/SuperAdminRoute';
 
 import RoleRouter from './pages/RoleRouter';
+import Home from './pages/Home';
 import Login from './pages/Login';
 import AcceptInvite from './pages/AcceptInvite';
 import ResetPassword from './pages/ResetPassword';
@@ -51,19 +52,34 @@ function useDarkMode() {
   }, []);
 }
 
+// `/` shows the marketing landing page for anonymous visitors and
+// hands off to RoleRouter (which dispatches to the right dashboard)
+// for authenticated users.
+const RootRoute = () => {
+  const { isAuthenticated, isLoadingAuth } = useAuth();
+  if (isLoadingAuth) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
+      </div>
+    );
+  }
+  return isAuthenticated ? <RoleRouter /> : <Home />;
+};
+
 const AuthenticatedApp = () => {
   useDarkMode();
 
   return (
     <Routes>
       {/* Public routes — no auth required */}
+      <Route path="/" element={<RootRoute />} />
       <Route path="/login" element={<Login />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Protected routes — require authentication */}
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
-        <Route path="/" element={<RoleRouter />} />
         <Route element={<SuperAdminRoute />}>
           <Route path="/admin" element={<AdminDashboard />} />
         </Route>
