@@ -6,7 +6,7 @@ import EmployerMobileNav from './EmployerMobileNav';
 import TrialBanner from './TrialBanner';
 import Paywall from './Paywall';
 import useCurrentUser from '@/lib/useCurrentUser';
-import { Accounts } from '@/api/entities';
+import api from '@/api/apiClient';
 
 export default function EmployerLayout() {
   const { user, loading } = useCurrentUser();
@@ -15,10 +15,15 @@ export default function EmployerLayout() {
 
   useEffect(() => {
     if (!user?.email) return;
-    Accounts.list({ owner_email: user.email })
-      .then((accounts) => setAccount(accounts[0] || null))
-      .catch(() => setAccount(null))
-      .finally(() => setAccountLoading(false));
+    // GET /api/accounts returns the caller's account (resolved by JWT,
+    // not query string). The previous Accounts.list({owner_email}) call
+    // sent an ignored query and dropped the response shape.
+    let cancelled = false;
+    api.get('/api/accounts')
+      .then((r) => { if (!cancelled) setAccount(r.data || null); })
+      .catch(() => { if (!cancelled) setAccount(null); })
+      .finally(() => { if (!cancelled) setAccountLoading(false); });
+    return () => { cancelled = true; };
   }, [user?.email]);
 
   if (loading || accountLoading) {
