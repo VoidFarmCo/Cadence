@@ -1,32 +1,40 @@
-// Supabase-backed data-access layer for Cadence.
+// Cadence data-access layer over Supabase.
 //
 // Each entity exposes the same { list, get, create, update, delete } shape as
-// the old axios-based src/api/entities.js so call sites can swap their import
-// from `@/api/entities` to `@/lib/db` with no other changes:
+// the existing axios-based src/api/entities.js, so call sites can switch over
+// by changing one import:
 //
-//   - import { Punches } from '@/api/entities';   // OLD: hits Express+Prisma backend
-//   + import { Punches } from '@/lib/db';         // NEW: hits Supabase directly
+//   - import { Punches } from '@/api/entities';
+//   + import { Punches } from '@/lib/db';
 //
-// The two imports can coexist during the migration; pages can be ported one
-// at a time.
-
+// Foundation tables come from migrations 0001 + 0004; workforce-core tables
+// come from 0007. Other entities (expenses, leave_requests, tax_*, messages,
+// worker_documents, audit_logs) will be added as their migrations land.
 import { supabase } from './supabase';
 
-// Build a CRUD entity backed by a Supabase table. `list({ key: value, ... })`
-// applies equality filters; `orderBy: { column, ascending }` overrides the
-// default sort; `limit` / `offset` paginate.
+// ---------------------------------------------------------------------------
+// Generic entity factory
+// ---------------------------------------------------------------------------
+// `params` to list() supports:
+//   * Equality filters: any key whose value is not undefined/null becomes a .eq()
+//   * orderBy: { column, ascending }  (defaults to options.defaultOrder)
+//   * limit:  number of rows
+//   * offset: starting row (used with limit)
+// Reserved keys (orderBy/limit/offset) are NOT translated to .eq() filters.
+const RESERVED_PARAMS = new Set(['orderBy', 'limit', 'offset']);
+
 function createEntity(table, options = {}) {
-  const defaultOrder = options.defaultOrder || { column: 'created_at', ascending: false };
+  const { defaultOrder = { column: 'created_at', ascending: false } } = options;
   return {
     async list(params = {}) {
       let q = supabase.from(table).select('*');
       for (const [key, val] of Object.entries(params)) {
+        if (RESERVED_PARAMS.has(key)) continue;
         if (val === undefined || val === null) continue;
-        if (key === 'orderBy' || key === 'limit' || key === 'offset') continue;
         q = q.eq(key, val);
       }
       const order = params.orderBy || defaultOrder;
-      if (order) q = q.order(order.column, { ascending: !!order.ascending });
+      if (order && order.column) q = q.order(order.column, { ascending: !!order.ascending });
       if (params.limit) {
         const offset = params.offset || 0;
         q = q.range(offset, offset + params.limit - 1);
@@ -59,33 +67,30 @@ function createEntity(table, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Foundation entities (from migration 0001 + 0004)
+// Foundation entities (migrations 0001 + 0004)
 // ---------------------------------------------------------------------------
 export const Profiles       = createEntity('profiles',        { defaultOrder: { column: 'created_at', ascending: true } });
-export const Companies      = createEntity('companies');
+export const Companies      = createEntity('companies',       { defaultOrder: { column: 'name',       ascending: true } });
 export const CompanyMembers = createEntity('company_members', { defaultOrder: { column: 'joined_at',  ascending: true } });
 export const Accounts       = createEntity('accounts');
 export const Sites          = createEntity('sites',           { defaultOrder: { column: 'name',       ascending: true } });
 export const WorkerProfiles = createEntity('worker_profiles', { defaultOrder: { column: 'full_name',  ascending: true } });
 
 // ---------------------------------------------------------------------------
-// Workforce-core entities (from migration 0007)
+// Workforce-core entities (migration 0007)
 // ---------------------------------------------------------------------------
-export const Punches     = createEntity('punches',      { defaultOrder: { column: 'timestamp',  ascending: false } });
-export const TimeEntries = createEntity('time_entries', { defaultOrder: { column: 'date',       ascending: false } });
-export const Shifts      = createEntity('shifts',       { defaultOrder: { column: 'date',       ascending: false } });
-export const PayPeriods  = createEntity('pay_periods',  { defaultOrder: { column: 'start_date', ascending: false } });
-export const PayrollRuns = createEntity('payroll_runs');
-
-// Stubs to fill in as later migrations land:
-// Expenses, LeaveRequests, TaxDeductions, TaxForms, Messages,
-// WorkerDocuments, AuditLogs.
+export const Punches      = createEntity('punches',      { defaultOrder: { column: 'timestamp',  ascending: false } });
+export const TimeEntries  = createEntity('time_entries', { defaultOrder: { column: 'date',       ascending: false } });
+export const Shifts       = createEntity('shifts',       { defaultOrder: { column: 'date',       ascending: false } });
+export const PayPeriods   = createEntity('pay_periods',  { defaultOrder: { column: 'start_date', ascending: false } });
+export const PayrollRuns  = createEntity('payroll_runs');
 
 // ---------------------------------------------------------------------------
-// Auth-aware helpers (richer than the entity CRUD surface)
+// Auth + company helpers
 // ---------------------------------------------------------------------------
 
 // Companies the signed-in user is a member of, with their per-company role.
+// Used at app boot and for the company switcher in AppContext.
 export async function listMyCompanies() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
@@ -109,12 +114,12 @@ export async function listMyCompanies() {
   }));
 }
 
-// Calls the create_company RPC: makes a company, the caller becomes owner,
-// a 14-day trial account is bootstrapped. Returns the new company id.
+// Server-side RPC: creates a company, makes caller owner, bootstraps a 14-day
+// trial account, in a single transaction.
 export async function createCompany(name, state = 'NM') {
   const { data, error } = await supabase.rpc('create_company', { p_name: name, p_state: state });
   if (error) throw error;
-  return data;
+  return data;   // new company id (uuid)
 }
 
 // Lets a non-owner remove themselves from a company.
@@ -129,14 +134,13 @@ export async function leaveCompany(companyId) {
   if (error) throw error;
 }
 
-// The signed-in user's worker_profile in `companyId`, or null if they don't
-// have one (e.g. they're an admin who isn't tracked as a worker). Pages that
-// create punches use this to fill in worker_profile_id and worker_name.
+// Returns the calling user's worker_profile in the given company, or null if
+// they aren't a worker in that company. Used by punch/time-entry pages to
+// pre-fill worker_profile_id without scanning the full worker_profiles list.
 export async function getMyWorkerProfile(companyId) {
   if (!companyId) return null;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-
   const { data, error } = await supabase
     .from('worker_profiles')
     .select('*')

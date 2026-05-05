@@ -1,19 +1,16 @@
 // Supabase client + auth helpers for Cadence.
 //
-// Imported by anything that touches the database, auth, or storage. The old
-// custom-JWT auth lives at src/lib/AuthContext.jsx + src/api/apiClient.js and
-// stays in place during the incremental migration; pages and hooks can switch
-// to this client one at a time.
-
+// This is the new auth/data path replacing the custom JWT/Express backend in
+// backend/src/routes/auth. During the migration it lives alongside the legacy
+// src/api/apiClient.js + src/lib/AuthContext.jsx, which read VITE_API_URL and
+// will be removed at cutover.
 import { createClient } from '@supabase/supabase-js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!url || !anonKey) {
-  throw new Error(
-    'Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Set them in .env (see .env.example).'
-  );
+  throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in environment');
 }
 
 export const supabase = createClient(url, anonKey, {

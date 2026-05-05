@@ -54,9 +54,9 @@ create table if not exists public.pay_periods (
   updated_at            timestamptz default now()
 );
 
-create index if not exists idx_pay_periods_company on public.pay_periods(company_id);
-create index if not exists idx_pay_periods_status  on public.pay_periods(status);
-create index if not exists idx_pay_periods_dates   on public.pay_periods(start_date, end_date);
+create index if not exists idx_pay_periods_company   on public.pay_periods(company_id);
+create index if not exists idx_pay_periods_status    on public.pay_periods(status);
+create index if not exists idx_pay_periods_dates     on public.pay_periods(start_date, end_date);
 create index if not exists idx_pay_periods_locked_by on public.pay_periods(locked_by);
 
 
@@ -211,7 +211,6 @@ as $$
 $$;
 
 revoke execute on function public.user_owns_worker_profile(uuid) from public;
-revoke execute on function public.user_owns_worker_profile(uuid) from anon;
 grant  execute on function public.user_owns_worker_profile(uuid) to authenticated;
 
 

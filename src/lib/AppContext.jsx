@@ -1,17 +1,21 @@
-// Cadence app context: Supabase Auth session + the user's currently-selected
-// company. Wraps the DB calls in src/lib/db.js so pages get reactive state
-// for the things that change as the user signs in / switches companies.
+// AppContext: Supabase-backed session + company switcher.
 //
-// The legacy src/lib/AuthContext.jsx (custom-JWT) stays in place during the
-// migration. Pages get ported to <AppProvider> + useApp() one at a time.
-
+// Mirrors WorkHub's src/lib/AppContext.jsx pattern but scoped to what Cadence
+// needs at this stage: auth session, the user's companies, and the active
+// company. Per-company entity lists (punches, time_entries, etc.) are NOT
+// preloaded here yet — pages can call the entity helpers in src/lib/db.js
+// directly via React Query (already a dep) for now, and we can move shared
+// data into this context later if it becomes a bottleneck.
+//
+// Coexists with the legacy src/lib/AuthContext.jsx (custom JWT) during the
+// migration. The legacy file will be removed at cutover.
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from './supabase';
 import {
   listMyCompanies,
   createCompany as dbCreateCompany,
   leaveCompany as dbLeaveCompany,
-  getMyWorkerProfile,
+  getMyWorkerProfile as dbGetMyWorkerProfile,
 } from './db';
 
 const AppContext = createContext(null);
@@ -32,44 +36,41 @@ export function AppProvider({ children }) {
   const [companyLoading, setCompanyLoading] = useState(false);
 
   const [myWorkerProfile, setMyWorkerProfile] = useState(null);
+
   const [error, setError] = useState(null);
 
-  // Subscribe to Supabase Auth.
+  // 1. Subscribe to Supabase auth state.
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
-      setSession(session);
+      setSession(data.session ?? null);
       setAuthLoading(false);
     });
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s ?? null);
     });
-    return () => {
-      mounted = false;
-      subscription.subscription.unsubscribe();
-    };
+    return () => { mounted = false; sub.subscription.unsubscribe(); };
   }, []);
 
+  // 2. Persist the active company across reloads.
   const setCurrentCompany = useCallback((id) => {
-    if (id) {
-      try { localStorage.setItem(CURRENT_COMPANY_KEY, id); } catch { /* private mode */ }
-    } else {
-      try { localStorage.removeItem(CURRENT_COMPANY_KEY); } catch { /* private mode */ }
-    }
+    try {
+      if (id) localStorage.setItem(CURRENT_COMPANY_KEY, id);
+      else    localStorage.removeItem(CURRENT_COMPANY_KEY);
+    } catch { /* private mode */ }
     setCurrentCompanyIdState(id);
   }, []);
 
-  // Load the user's companies and pick a current one.
+  // 3. Load the user's companies after sign-in.
   const refreshCompanies = useCallback(async () => {
     setCompanyLoading(true);
     setError(null);
     try {
       const cs = await listMyCompanies();
       setCompanies(cs);
-      const stored = (() => {
-        try { return localStorage.getItem(CURRENT_COMPANY_KEY); } catch { return null; }
-      })();
+      let stored = null;
+      try { stored = localStorage.getItem(CURRENT_COMPANY_KEY); } catch { /* private mode */ }
       const isValid = stored && cs.find(c => c.id === stored);
       const next = isValid ? stored : (cs[0]?.id || null);
       setCurrentCompany(next);
@@ -83,7 +84,6 @@ export function AppProvider({ children }) {
     }
   }, [setCurrentCompany]);
 
-  // Re-load companies on sign-in / clear on sign-out.
   useEffect(() => {
     if (session) {
       refreshCompanies();
@@ -94,66 +94,59 @@ export function AppProvider({ children }) {
     }
   }, [session, refreshCompanies, setCurrentCompany]);
 
-  // Re-load this user's worker_profile whenever they switch companies.
+  // 4. Whenever the active company changes, fetch the caller's worker_profile
+  //    in that company (if any). Workers' punch/time-entry pages need this.
   useEffect(() => {
     let cancelled = false;
     if (!session || !currentCompanyId) {
       setMyWorkerProfile(null);
-      return;
+      return () => {};
     }
-    getMyWorkerProfile(currentCompanyId)
+    dbGetMyWorkerProfile(currentCompanyId)
       .then(wp => { if (!cancelled) setMyWorkerProfile(wp); })
-      .catch(e => {
-        if (!cancelled) {
-          console.error('getMyWorkerProfile failed', e);
-          setMyWorkerProfile(null);
-        }
-      });
+      .catch(e => { if (!cancelled) { console.error('getMyWorkerProfile failed', e); setMyWorkerProfile(null); } });
     return () => { cancelled = true; };
   }, [session, currentCompanyId]);
 
-  // ----- Mutations -------------------------------------------------------
-  const createCompany = async (name, state) => {
+  // ----- Mutations ---------------------------------------------------------
+  const createCompany = useCallback(async (name, state = 'NM') => {
     const newId = await dbCreateCompany(name, state);
     await refreshCompanies();
     setCurrentCompany(newId);
     return newId;
-  };
+  }, [refreshCompanies, setCurrentCompany]);
 
-  const leaveCompany = async (id) => {
+  const leaveCompany = useCallback(async (id) => {
     const remaining = companies.filter(c => c.id !== id);
     setCompanies(remaining);
     if (currentCompanyId === id) setCurrentCompany(remaining[0]?.id || null);
-    try {
-      await dbLeaveCompany(id);
-    } catch (e) {
-      refreshCompanies();
-      throw e;
-    }
-  };
+    try { await dbLeaveCompany(id); }
+    catch (e) { refreshCompanies(); throw e; }
+  }, [companies, currentCompanyId, refreshCompanies, setCurrentCompany]);
 
-  const currentMembership = companies.find(c => c.id === currentCompanyId) || null;
+  // ----- Derived -----------------------------------------------------------
+  const currentCompany    = companies.find(c => c.id === currentCompanyId) || null;
+  const currentMembership = currentCompany;  // role + state live on the same record
+
   const value = {
-    // Auth
     session,
     user: session?.user || null,
     authLoading,
 
-    // Companies
     companies,
     currentCompanyId,
-    currentCompany: currentMembership,
-    currentRole: currentMembership?.role || null,
+    currentCompany,
+    currentMembership,
     companyLoading,
+
+    myWorkerProfile,
+
+    error,
+
     setCurrentCompany,
     refreshCompanies,
     createCompany,
     leaveCompany,
-
-    // The signed-in user's worker_profile in the current company (or null).
-    myWorkerProfile,
-
-    error,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
