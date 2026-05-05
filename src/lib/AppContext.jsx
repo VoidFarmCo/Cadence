@@ -10,7 +10,7 @@
 // Coexists with the legacy src/lib/AuthContext.jsx (custom JWT) during the
 // migration. The legacy file will be removed at cutover.
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import {
   listMyCompanies,
   createCompany as dbCreateCompany,
@@ -42,11 +42,24 @@ export function AppProvider({ children }) {
   // 1. Subscribe to Supabase auth state.
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSession(data.session ?? null);
+    if (!isSupabaseConfigured) {
       setAuthLoading(false);
-    });
+      return () => { mounted = false; };
+    }
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        if (!mounted) return;
+        setSession(data.session ?? null);
+        setAuthLoading(false);
+      })
+      .catch(e => {
+        if (!mounted) return;
+        // Failure here is usually a misconfigured URL/key. Surface via error
+        // state so the page can show a friendly message rather than spinning.
+        console.warn('supabase.auth.getSession failed:', e);
+        setError(e);
+        setAuthLoading(false);
+      });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s ?? null);
     });
@@ -132,6 +145,7 @@ export function AppProvider({ children }) {
     session,
     user: session?.user || null,
     authLoading,
+    isSupabaseConfigured,
 
     companies,
     currentCompanyId,
