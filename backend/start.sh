@@ -9,11 +9,14 @@ const prisma = new PrismaClient();
 async function cleanup() {
   console.log('Cleaning orphaned company_id references...');
   
+  // 'accounts' intentionally excluded — nulling Account.company_id on a
+  // transient FK mismatch leaves owners unable to resolve their account
+  // and creates the orphan we have to heal manually.
   const tables = [
     'worker_profiles', 'sites', 'pay_periods', 'messages',
     'punches', 'time_entries', 'shifts', 'payroll_runs',
     'expenses', 'leave_requests', 'tax_deductions', 'tax_forms',
-    'worker_documents', 'audit_logs', 'accounts'
+    'worker_documents', 'audit_logs'
   ];
   
   for (const table of tables) {

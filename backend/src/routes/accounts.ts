@@ -14,8 +14,16 @@ const router = Router();
 router.get('/', authenticate, requireRole('owner'), async (req: AuthRequest, res: Response) => {
   try {
     const companyId = await getCompanyId(req.user!.email);
+    // Match by company OR owner email so an Account whose company_id was
+    // nulled (e.g. by start.sh's cleanup running during a brief FK
+    // mismatch) still resolves for the legitimate owner.
     const account = await prisma.account.findFirst({
-      where: companyId ? { company_id: companyId } : { owner_email: req.user!.email },
+      where: {
+        OR: [
+          ...(companyId ? [{ company_id: companyId }] : []),
+          { owner_email: req.user!.email },
+        ],
+      },
     });
     if (!account) {
       res.status(404).json({ error: 'Account not found' });

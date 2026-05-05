@@ -73,8 +73,18 @@ export default function People() {
         toast.success(`Invited ${invitedName}`);
       }
     } catch (err) {
+      const status = err?.response?.status;
       const msg = err?.response?.data?.error || err?.message || 'Unknown error';
-      toast.error('Failed to send invite: ' + msg);
+      if (status === 409) {
+        toast.error(
+          'That email already has a Cadence account. Ask them to log in directly, or use a different email.'
+        );
+      } else if (status === 403) {
+        // Role-hierarchy guard returns a clear message; surface it as-is.
+        toast.error(msg);
+      } else {
+        toast.error('Failed to send invite: ' + msg);
+      }
     } finally {
       setSubmittingInvite(false);
     }
