@@ -189,11 +189,27 @@ router.delete(
         where: { id: req.params.id },
       });
 
-      // Deactivate the user account (don't delete — preserves audit trail)
-      await prisma.user.updateMany({
+      // If the User never redeemed their invite (no password set), hard
+      // -delete the row so a fresh invite for the same email succeeds.
+      // Otherwise (real activated user) deactivate to preserve audit.
+      const targetUser = await prisma.user.findUnique({
         where: { email: profile.user_email },
-        data: { status: 'inactive' },
+        select: { id: true, password_hash: true, status: true },
       });
+      if (targetUser) {
+        const neverRedeemed =
+          !targetUser.password_hash ||
+          targetUser.password_hash === '' ||
+          targetUser.status === 'pending';
+        if (neverRedeemed) {
+          await prisma.user.delete({ where: { id: targetUser.id } });
+        } else {
+          await prisma.user.update({
+            where: { id: targetUser.id },
+            data: { status: 'inactive' },
+          });
+        }
+      }
 
       await createAuditLog({
         action: 'delete',
