@@ -18,10 +18,12 @@ export default function EmployerLayout() {
     // GET /api/accounts returns the caller's account (resolved by JWT,
     // not query string). The previous Accounts.list({owner_email}) call
     // sent an ignored query and dropped the response shape.
+    let cancelled = false;
     api.get('/api/accounts')
-      .then((r) => setAccount(r.data || null))
-      .catch(() => setAccount(null))
-      .finally(() => setAccountLoading(false));
+      .then((r) => { if (!cancelled) setAccount(r.data || null); })
+      .catch(() => { if (!cancelled) setAccount(null); })
+      .finally(() => { if (!cancelled) setAccountLoading(false); });
+    return () => { cancelled = true; };
   }, [user?.email]);
 
   if (loading || accountLoading) {

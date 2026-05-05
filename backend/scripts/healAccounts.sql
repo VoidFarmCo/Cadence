@@ -1,6 +1,7 @@
 -- One-shot data heal: re-link Account rows whose company_id was nulled
--- by start.sh's cleanup loop (the loop is also being removed in this
--- patch, but rows already affected stay broken until this runs).
+-- by start.sh's cleanup loop. The loop still runs but no longer
+-- includes the accounts table; this script heals rows that were
+-- already nulled before that change landed.
 --
 -- Usage:
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/scripts/healAccounts.sql
