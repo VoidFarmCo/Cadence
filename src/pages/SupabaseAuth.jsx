@@ -18,6 +18,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppProvider, useApp } from '@/lib/AppContext';
+import FullScreenSpinner from '@/lib/FullScreenSpinner';
 import {
   signUpWithEmail,
   signInWithEmail,
@@ -31,14 +32,6 @@ function Card({ children, title }) {
     <div className="max-w-md mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
       {title && <h2 className="text-xl font-semibold mb-4">{title}</h2>}
       {children}
-    </div>
-  );
-}
-
-function Spinner() {
-  return (
-    <div className="fixed inset-0 flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
     </div>
   );
 }
@@ -279,7 +272,7 @@ function SignedIn() {
 
 function Inner() {
   const { authLoading, session } = useApp();
-  if (authLoading) return <Spinner />;
+  if (authLoading) return <FullScreenSpinner />;
   return session ? <SignedIn /> : <SignedOut />;
 }
 

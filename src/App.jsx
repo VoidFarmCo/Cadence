@@ -5,6 +5,7 @@ import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
 import PageNotFound from './lib/PageNotFound';
+import FullScreenSpinner from './lib/FullScreenSpinner';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import SuperAdminRoute from '@/components/SuperAdminRoute';
@@ -62,21 +63,9 @@ function useDarkMode() {
 // for authenticated users.
 const RootRoute = () => {
   const { isAuthenticated, isLoadingAuth } = useAuth();
-  if (isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (isLoadingAuth) return <FullScreenSpinner />;
   return isAuthenticated ? <RoleRouter /> : <Home />;
 };
-
-const RouteSpinner = () => (
-  <div className="fixed inset-0 flex items-center justify-center">
-    <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
-  </div>
-);
 
 const AuthenticatedApp = () => {
   useDarkMode();
@@ -94,7 +83,7 @@ const AuthenticatedApp = () => {
       <Route
         path="/supabase-auth"
         element={
-          <Suspense fallback={<RouteSpinner />}>
+          <Suspense fallback={<FullScreenSpinner />}>
             <SupabaseAuth />
           </Suspense>
         }
