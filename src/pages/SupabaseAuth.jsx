@@ -1,24 +1,16 @@
 // /supabase-auth — proof-of-life for the new Supabase stack.
 //
 // Standalone page (not inside <ProtectedRoute>) that exercises the full
-// new auth + tenancy round-trip:
-//   1. Sign up with email + password — verifies handle_new_user trigger
-//      creates the profiles row.
-//   2. Sign in — verifies Supabase Auth.
-//   3. Create a company via the create_company RPC — verifies the SECURITY
-//      DEFINER function bootstraps companies + company_members + accounts.
-//   4. List my companies — verifies RLS only returns rows the user belongs to.
-//   5. Sign out.
+// new auth + tenancy round-trip. Imported eagerly from App.jsx (was lazy,
+// but the lazy chunk failed silently in prod — see App.jsx note).
 //
-// The legacy /login page (Express+Prisma JWT) keeps working in parallel.
-//
-// Lazy-loaded from App.jsx so the rest of the app never imports the Supabase
-// client. If env vars aren't set, this page renders a friendly setup message
-// instead of crashing.
-import { useState } from 'react';
+// Includes a deliberately visible debug header at the top so we can tell at
+// a glance whether the page actually rendered, regardless of dark-mode
+// rendering quirks. Wrapped in a tiny ErrorBoundary so render-time errors
+// surface inline instead of producing a blank page.
+import { Component, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppProvider, useApp } from '@/lib/AppContext';
-import FullScreenSpinner from '@/lib/FullScreenSpinner';
 import {
   signUpWithEmail,
   signInWithEmail,
@@ -270,31 +262,83 @@ function SignedIn() {
   );
 }
 
+// Replaces the previous tiny FullScreenSpinner so a stuck `authLoading`
+// state shows a clearly-visible message instead of an invisible spinner on
+// a dark phone screen.
+function LoadingCard() {
+  return (
+    <Card title="Loading session…">
+      <p className="text-sm text-slate-500">
+        Checking Supabase auth state. Usually instant; if this stays for more than a few
+        seconds the Supabase URL or key may be wrong.
+      </p>
+    </Card>
+  );
+}
+
 function Inner() {
   const { authLoading, session } = useApp();
-  if (authLoading) return <FullScreenSpinner />;
+  if (authLoading) return <LoadingCard />;
   return session ? <SignedIn /> : <SignedOut />;
 }
 
-export default function SupabaseAuth() {
-  if (!isSupabaseConfigured) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4">
-        <NotConfigured />
-        <p className="text-center text-xs text-slate-500 mt-6">
-          <Link to="/" className="hover:underline">← Back to home</Link>
-        </p>
-      </div>
-    );
+// Catch render-time errors anywhere in the page so they surface inline
+// instead of producing a blank screen with no console access on mobile.
+class DebugErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
   }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    // eslint-disable-next-line no-console
+    console.error('[supabase-auth] render error', error, info);
+  }
+  render() {
+    if (this.state.error) {
+      const e = this.state.error;
+      return (
+        <div className="min-h-screen bg-red-50 dark:bg-red-950 py-12 px-4">
+          <Card title="Page error">
+            <p className="text-sm text-red-700 dark:text-red-300 mb-2 font-medium">
+              {e.message || String(e)}
+            </p>
+            {e.stack && (
+              <pre className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words bg-slate-100 dark:bg-slate-800 rounded p-2 max-h-96 overflow-auto">
+                {e.stack}
+              </pre>
+            )}
+          </Card>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function SupabaseAuth() {
   return (
-    <AppProvider>
+    <DebugErrorBoundary>
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4">
-        <Inner />
+        {/* Visible breadcrumb so we can confirm the page rendered at all */}
+        <p className="text-center mb-6 text-sm font-mono text-emerald-600 dark:text-emerald-400">
+          /supabase-auth loaded · configured: {String(isSupabaseConfigured)}
+        </p>
+
+        {!isSupabaseConfigured ? (
+          <NotConfigured />
+        ) : (
+          <AppProvider>
+            <Inner />
+          </AppProvider>
+        )}
+
         <p className="text-center text-xs text-slate-500 mt-6">
           <Link to="/" className="hover:underline">← Back to home</Link>
         </p>
       </div>
-    </AppProvider>
+    </DebugErrorBoundary>
   );
 }
