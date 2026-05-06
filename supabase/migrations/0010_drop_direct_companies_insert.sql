@@ -1,0 +1,12 @@
+-- Bug from 0004: companies_insert (`with check (auth.uid() is not null)`)
+-- let any authenticated user POST /rest/v1/companies directly and create
+-- an orphan company — no owner row in company_members, no row in accounts.
+-- The intended creation path is the create_company(name, state) RPC, which
+-- atomically creates the company + the owner's company_members row + the
+-- trial accounts row.
+--
+-- create_company is SECURITY DEFINER so it bypasses RLS on inserts.
+-- Dropping this policy blocks direct PostgREST inserts without affecting
+-- the RPC. Future ownership-transfer or admin flows that need direct
+-- company writes will go through their own SECURITY DEFINER RPCs.
+drop policy if exists "companies_insert" on public.companies;
