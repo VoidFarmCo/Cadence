@@ -3,8 +3,9 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import PageNotFound from './lib/PageNotFound';
+import FullScreenSpinner from './lib/FullScreenSpinner';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import SuperAdminRoute from '@/components/SuperAdminRoute';
@@ -41,6 +42,11 @@ import Billing from './pages/employer/Billing';
 import PayrollAnalytics from './pages/employer/PayrollAnalytics';
 import Users from './pages/employer/Users';
 
+// Lazy-loaded so importing src/lib/supabase.js (and the @supabase/supabase-js
+// chunk) is deferred until a user actually visits /supabase-auth. Keeps the
+// rest of the app independent of Supabase env vars during the migration.
+const SupabaseAuth = lazy(() => import('./pages/SupabaseAuth'));
+
 function useDarkMode() {
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -57,13 +63,7 @@ function useDarkMode() {
 // for authenticated users.
 const RootRoute = () => {
   const { isAuthenticated, isLoadingAuth } = useAuth();
-  if (isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (isLoadingAuth) return <FullScreenSpinner />;
   return isAuthenticated ? <RoleRouter /> : <Home />;
 };
 
@@ -77,6 +77,17 @@ const AuthenticatedApp = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* New Supabase auth (preview) — lazy-loaded so it doesn't pull the
+          Supabase client into the legacy bundle. */}
+      <Route
+        path="/supabase-auth"
+        element={
+          <Suspense fallback={<FullScreenSpinner />}>
+            <SupabaseAuth />
+          </Suspense>
+        }
+      />
 
       {/* Protected routes — require authentication */}
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
