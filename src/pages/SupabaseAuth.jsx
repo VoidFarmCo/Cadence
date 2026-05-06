@@ -282,8 +282,24 @@ function Inner() {
   return session ? <SignedIn /> : <SignedOut />;
 }
 
+// True when the visitor has explicitly opted in to seeing internal stack
+// traces via `?debug=1` in the URL. Lets us debug live prod issues without
+// surfacing internal file paths / module names to every visitor.
+function wantsDebug() {
+  if (typeof window === 'undefined') return false;
+  try {
+    return new URLSearchParams(window.location.search).get('debug') === '1';
+  } catch {
+    return false;
+  }
+}
+
 // Catch render-time errors anywhere in the page so they surface inline
 // instead of producing a blank screen with no console access on mobile.
+//
+// The error MESSAGE is always shown (a real failure must be debuggable), but
+// the full STACK is gated behind `import.meta.env.DEV` or `?debug=1` so
+// production visitors don't see internal paths and module structure.
 class DebugErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -299,16 +315,21 @@ class DebugErrorBoundary extends Component {
   render() {
     if (this.state.error) {
       const e = this.state.error;
+      const showStack = import.meta.env.DEV || wantsDebug();
       return (
         <div className="min-h-screen bg-red-50 dark:bg-red-950 py-12 px-4">
           <Card title="Page error">
             <p className="text-sm text-red-700 dark:text-red-300 mb-2 font-medium">
               {e.message || String(e)}
             </p>
-            {e.stack && (
+            {showStack && e.stack ? (
               <pre className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words bg-slate-100 dark:bg-slate-800 rounded p-2 max-h-96 overflow-auto">
                 {e.stack}
               </pre>
+            ) : (
+              <p className="text-xs text-slate-500">
+                Add <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">?debug=1</code> to the URL to see the stack trace.
+              </p>
             )}
           </Card>
         </div>
