@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '@/api/apiClient';
 import { WorkerDocuments as WorkerDocumentsAPI } from '@/api/entities';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,14 +24,31 @@ const DOC_COLORS = {
   'Other': 'bg-muted text-muted-foreground',
 };
 
-async function uploadFile(file) {
-  const formData = new FormData();
-  formData.append('file', file);
-  // TODO: implement file upload endpoint
-  const { data } = await api.post('/api/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return data; // { file_url }
+/**
+ * Upload a file directly to Supabase Storage.
+ * Returns { file_url, file_path } — file_url is the permanent public URL,
+ * file_path is the storage key used for deletion.
+ */
+async function uploadFile(file, workerEmail) {
+  const timestamp = Date.now();
+  // Sanitize filename for storage — replace unsafe chars with underscore
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `workers/${workerEmail}/${timestamp}_${safeName}`;
+
+  const { data, error } = await supabase.storage
+    .from('attachments')
+    .upload(path, file, {
+      cacheControl: '3600',
+      upsert: false,
+    });
+
+  if (error) throw error;
+
+  const { data: urlData } = supabase.storage
+    .from('attachments')
+    .getPublicUrl(data.path);
+
+  return { file_url: urlData.publicUrl, file_path: data.path };
 }
 
 export default function WorkerDocuments({ worker, readOnly = false }) {
@@ -58,7 +76,7 @@ export default function WorkerDocuments({ worker, readOnly = false }) {
       return;
     }
     setUploading(true);
-    const { file_url } = await uploadFile(file);
+    const { file_url, file_path } = await uploadFile(file, worker.user_email);
     const me = await api.get('/api/auth/me').then(r => r.data);
     await WorkerDocumentsAPI.create({
       worker_email: worker.user_email,
@@ -66,6 +84,7 @@ export default function WorkerDocuments({ worker, readOnly = false }) {
       doc_type: form.doc_type,
       title: form.title,
       file_url,
+      file_path,
       file_name: file.name,
       notes: form.notes || undefined,
       expiry_date: form.expiry_date || undefined,
@@ -81,6 +100,13 @@ export default function WorkerDocuments({ worker, readOnly = false }) {
 
   async function handleDelete(doc) {
     if (!confirm(`Delete "${doc.title}"?`)) return;
+    // Remove file from Supabase Storage if file_path is available
+    if (doc.file_path) {
+      const { error: storageError } = await supabase.storage
+        .from('attachments')
+        .remove([doc.file_path]);
+      if (storageError) console.warn('Storage cleanup failed for', doc.file_path, storageError);
+    }
     await WorkerDocumentsAPI.delete(doc.id);
     setDocs(prev => prev.filter(d => d.id !== doc.id));
     toast.success('Document deleted');

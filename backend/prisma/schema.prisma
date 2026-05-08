@@ -618,6 +618,7 @@ model WorkerDocument {
   doc_type     DocType
   title        String
   file_url     String?
+  file_path    String?
   file_name    String?
   notes        String?
   uploaded_by  String?
