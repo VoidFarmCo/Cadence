@@ -1,6 +1,10 @@
 -- ============================================================================
--- 0011: Worker Documents — Supabase Storage bucket + RLS
+-- 0015: Worker Documents — Supabase Storage bucket + RLS
 -- ============================================================================
+-- Renamed from 0011_worker_documents_storage.sql to resolve the version-number
+-- collision with Hermes's 0011_missing_tables (now captured in this repo).
+-- This file's content is unchanged — only the filename moved.
+--
 -- Creates the `attachments` bucket for worker document file storage and
 -- adds RLS policies so only authenticated users can upload/delete.
 --
