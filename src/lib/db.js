@@ -66,6 +66,15 @@ function createEntity(table, options = {}) {
   };
 }
 
+// Resolve the current Supabase user, surfacing any auth error rather than
+// silently producing undefined and proceeding. Returns null only when the
+// caller is genuinely signed out (data.user is null without an error).
+async function getCurrentUserOrThrow() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  return data?.user || null;
+}
+
 // ---------------------------------------------------------------------------
 // Foundation entities (migrations 0001 + 0004)
 // ---------------------------------------------------------------------------
@@ -98,7 +107,7 @@ export const InviteLinks = createEntity('invite_links', { defaultOrder: { column
 // Companies the signed-in user is a member of, with their per-company role.
 // Used at app boot and for the company switcher in AppContext.
 export async function listMyCompanies() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUserOrThrow();
   if (!user) return [];
 
   const { data, error } = await supabase
@@ -130,7 +139,7 @@ export async function createCompany(name, state = 'NM') {
 
 // Lets a non-owner remove themselves from a company.
 export async function leaveCompany(companyId) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUserOrThrow();
   if (!user) throw new Error('not authenticated');
   const { error } = await supabase
     .from('company_members')
@@ -145,7 +154,7 @@ export async function leaveCompany(companyId) {
 // pre-fill worker_profile_id without scanning the full worker_profiles list.
 export async function getMyWorkerProfile(companyId) {
   if (!companyId) return null;
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUserOrThrow();
   if (!user) return null;
   const { data, error } = await supabase
     .from('worker_profiles')
@@ -168,20 +177,14 @@ export async function getMyWorkerProfile(companyId) {
 // it here too keeps the round-trip predictable.
 
 export async function listInvitations(companyId) {
-  if (!companyId) return [];
-  const { data, error } = await supabase
-    .from('invitations')
-    .select('*')
-    .eq('company_id', companyId)
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
+  if (!companyId) throw new Error('listInvitations: companyId required');
+  return Invitations.list({ company_id: companyId });
 }
 
 export async function createInvitation({ email, role }, companyId) {
   if (!companyId) throw new Error('createInvitation: companyId required');
   if (!email)     throw new Error('createInvitation: email required');
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUserOrThrow();
   const { data, error } = await supabase
     .from('invitations')
     .insert({
@@ -228,14 +231,8 @@ export async function applyInvitationFor(email) {
 // can sign in and redeem to join the company.
 
 export async function listInviteLinks(companyId) {
-  if (!companyId) return [];
-  const { data, error } = await supabase
-    .from('invite_links')
-    .select('*')
-    .eq('company_id', companyId)
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
+  if (!companyId) throw new Error('listInviteLinks: companyId required');
+  return InviteLinks.list({ company_id: companyId });
 }
 
 // Server-side RPC so token generation stays in Postgres. The DB rejects
@@ -269,7 +266,8 @@ export async function revokeInviteLink(id) {
 // revoked/expired/used-up links.
 export async function peekInviteLink(token) {
   if (!token) return null;
-  const { data, error } = await supabase.rpc('peek_invite_link', { p_token: token });
+  // Trim to absorb stray whitespace/newlines from URL-parsing or copy-paste.
+  const { data, error } = await supabase.rpc('peek_invite_link', { p_token: token.trim() });
   if (error) throw error;
   return Array.isArray(data) ? data[0] : data;
 }
@@ -279,7 +277,8 @@ export async function peekInviteLink(token) {
 // redemptions can't overshoot max_uses (added in 0020).
 export async function redeemInviteLink(token) {
   if (!token) throw new Error('redeemInviteLink: token required');
-  const { data, error } = await supabase.rpc('redeem_invite_link', { p_token: token });
+  // Trim to absorb stray whitespace/newlines from URL-parsing or copy-paste.
+  const { data, error } = await supabase.rpc('redeem_invite_link', { p_token: token.trim() });
   if (error) throw error;
   return data; // company id (uuid)
 }
