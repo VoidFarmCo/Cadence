@@ -86,6 +86,12 @@ export const PayPeriods   = createEntity('pay_periods',  { defaultOrder: { colum
 export const PayrollRuns  = createEntity('payroll_runs');
 
 // ---------------------------------------------------------------------------
+// Onboarding entities (migrations 0018 + 0019)
+// ---------------------------------------------------------------------------
+export const Invitations = createEntity('invitations',  { defaultOrder: { column: 'created_at', ascending: false } });
+export const InviteLinks = createEntity('invite_links', { defaultOrder: { column: 'created_at', ascending: false } });
+
+// ---------------------------------------------------------------------------
 // Auth + company helpers
 // ---------------------------------------------------------------------------
 
@@ -149,4 +155,131 @@ export async function getMyWorkerProfile(companyId) {
     .maybeSingle();
   if (error) throw error;
   return data;
+}
+
+// ---------------------------------------------------------------------------
+// Invitations (migration 0018)
+// ---------------------------------------------------------------------------
+// Admin-driven email invitations: owner/payroll_admin creates one, the
+// invited user gets added to company_members when they sign up.
+//
+// invitations.email is normalized to lower(btrim(...)) by a BEFORE trigger
+// (migration 0020) so callers don't strictly have to lowercase, but doing
+// it here too keeps the round-trip predictable.
+
+export async function listInvitations(companyId) {
+  if (!companyId) return [];
+  const { data, error } = await supabase
+    .from('invitations')
+    .select('*')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createInvitation({ email, role }, companyId) {
+  if (!companyId) throw new Error('createInvitation: companyId required');
+  if (!email)     throw new Error('createInvitation: email required');
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('invitations')
+    .insert({
+      company_id: companyId,
+      email: email.trim().toLowerCase(),
+      role: role || 'worker',
+      invited_by: user?.id ?? null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Mark an invitation as revoked. The invitation stays in the table for
+// audit purposes (status flips to 'revoked' rather than deleting the row).
+export async function revokeInvitation(id) {
+  const { data, error } = await supabase
+    .from('invitations')
+    .update({ status: 'revoked' })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Retroactively apply pending invitations for an email that already has an
+// account (useful when an admin invites someone who's already signed up).
+// Returns the count of invitations actually applied.
+export async function applyInvitationFor(email) {
+  if (!email) return 0;
+  const { data, error } = await supabase.rpc('apply_invitation_for', {
+    target_email: email.trim().toLowerCase(),
+  });
+  if (error) throw error;
+  return data ?? 0;
+}
+
+// ---------------------------------------------------------------------------
+// Invite links (migration 0019)
+// ---------------------------------------------------------------------------
+// Shareable token-based join URLs. Admin generates one, anyone with the URL
+// can sign in and redeem to join the company.
+
+export async function listInviteLinks(companyId) {
+  if (!companyId) return [];
+  const { data, error } = await supabase
+    .from('invite_links')
+    .select('*')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+// Server-side RPC so token generation stays in Postgres. The DB rejects
+// maxUses <= 0 with a clear error (added in 0021).
+export async function createInviteLink({ companyId, role, maxUses, expiresAt }) {
+  if (!companyId) throw new Error('createInviteLink: companyId required');
+  const { data, error } = await supabase.rpc('create_invite_link', {
+    p_company_id: companyId,
+    p_role:       role || 'worker',
+    p_max_uses:   maxUses ?? null,
+    p_expires_at: expiresAt ?? null,
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] : data;
+}
+
+export async function revokeInviteLink(id) {
+  const { data, error } = await supabase
+    .from('invite_links')
+    .update({ revoked: true })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// peek: callable by anon (no auth required). Returns the company name +
+// an is_usable boolean so the join page can show "Joining Acme Corp" before
+// sign-in, plus a clear "this invite is no longer valid" message for
+// revoked/expired/used-up links.
+export async function peekInviteLink(token) {
+  if (!token) return null;
+  const { data, error } = await supabase.rpc('peek_invite_link', { p_token: token });
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] : data;
+}
+
+// redeem: authenticated only. Adds the caller to the link's company. Returns
+// the company id. The function uses SELECT ... FOR UPDATE so concurrent
+// redemptions can't overshoot max_uses (added in 0020).
+export async function redeemInviteLink(token) {
+  if (!token) throw new Error('redeemInviteLink: token required');
+  const { data, error } = await supabase.rpc('redeem_invite_link', { p_token: token });
+  if (error) throw error;
+  return data; // company id (uuid)
 }
