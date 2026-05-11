@@ -69,6 +69,9 @@ function createEntity(table, options = {}) {
 // Resolve the current Supabase user, surfacing any auth error rather than
 // silently producing undefined and proceeding. Returns null only when the
 // caller is genuinely signed out (data.user is null without an error).
+//
+// Callers decide what to do with null — listMyCompanies returns [], the
+// require-auth helpers throw 'not authenticated', etc.
 async function getCurrentUserOrThrow() {
   const { data, error } = await supabase.auth.getUser();
   if (error) throw error;
@@ -185,13 +188,14 @@ export async function createInvitation({ email, role }, companyId) {
   if (!companyId) throw new Error('createInvitation: companyId required');
   if (!email)     throw new Error('createInvitation: email required');
   const user = await getCurrentUserOrThrow();
+  if (!user) throw new Error('createInvitation: not authenticated');
   const { data, error } = await supabase
     .from('invitations')
     .insert({
       company_id: companyId,
       email: email.trim().toLowerCase(),
       role: role || 'worker',
-      invited_by: user?.id ?? null,
+      invited_by: user.id,
     })
     .select()
     .single();
@@ -264,10 +268,13 @@ export async function revokeInviteLink(id) {
 // an is_usable boolean so the join page can show "Joining Acme Corp" before
 // sign-in, plus a clear "this invite is no longer valid" message for
 // revoked/expired/used-up links.
+//
+// Trims the token first so all-whitespace input is treated like a missing
+// token (avoids a pointless RPC call).
 export async function peekInviteLink(token) {
-  if (!token) return null;
-  // Trim to absorb stray whitespace/newlines from URL-parsing or copy-paste.
-  const { data, error } = await supabase.rpc('peek_invite_link', { p_token: token.trim() });
+  const trimmed = (token || '').trim();
+  if (!trimmed) return null;
+  const { data, error } = await supabase.rpc('peek_invite_link', { p_token: trimmed });
   if (error) throw error;
   return Array.isArray(data) ? data[0] : data;
 }
@@ -276,9 +283,9 @@ export async function peekInviteLink(token) {
 // the company id. The function uses SELECT ... FOR UPDATE so concurrent
 // redemptions can't overshoot max_uses (added in 0020).
 export async function redeemInviteLink(token) {
-  if (!token) throw new Error('redeemInviteLink: token required');
-  // Trim to absorb stray whitespace/newlines from URL-parsing or copy-paste.
-  const { data, error } = await supabase.rpc('redeem_invite_link', { p_token: token.trim() });
+  const trimmed = (token || '').trim();
+  if (!trimmed) throw new Error('redeemInviteLink: token required');
+  const { data, error } = await supabase.rpc('redeem_invite_link', { p_token: trimmed });
   if (error) throw error;
   return data; // company id (uuid)
 }
