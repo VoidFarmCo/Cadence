@@ -78,6 +78,13 @@ async function getCurrentUserOrThrow() {
   return data?.user || null;
 }
 
+// Canonical form of an invite-link token. Currently just trim, but having
+// a single helper means future changes (case folding, allow-list of chars,
+// etc.) only touch one place.
+function normalizeInviteToken(token) {
+  return (token || '').trim();
+}
+
 // ---------------------------------------------------------------------------
 // Foundation entities (migrations 0001 + 0004)
 // ---------------------------------------------------------------------------
@@ -268,13 +275,10 @@ export async function revokeInviteLink(id) {
 // an is_usable boolean so the join page can show "Joining Acme Corp" before
 // sign-in, plus a clear "this invite is no longer valid" message for
 // revoked/expired/used-up links.
-//
-// Trims the token first so all-whitespace input is treated like a missing
-// token (avoids a pointless RPC call).
 export async function peekInviteLink(token) {
-  const trimmed = (token || '').trim();
-  if (!trimmed) return null;
-  const { data, error } = await supabase.rpc('peek_invite_link', { p_token: trimmed });
+  const t = normalizeInviteToken(token);
+  if (!t) return null;
+  const { data, error } = await supabase.rpc('peek_invite_link', { p_token: t });
   if (error) throw error;
   return Array.isArray(data) ? data[0] : data;
 }
@@ -283,9 +287,9 @@ export async function peekInviteLink(token) {
 // the company id. The function uses SELECT ... FOR UPDATE so concurrent
 // redemptions can't overshoot max_uses (added in 0020).
 export async function redeemInviteLink(token) {
-  const trimmed = (token || '').trim();
-  if (!trimmed) throw new Error('redeemInviteLink: token required');
-  const { data, error } = await supabase.rpc('redeem_invite_link', { p_token: trimmed });
+  const t = normalizeInviteToken(token);
+  if (!t) throw new Error('redeemInviteLink: token required');
+  const { data, error } = await supabase.rpc('redeem_invite_link', { p_token: t });
   if (error) throw error;
   return data; // company id (uuid)
 }
