@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, lazy, Suspense, Component } from 'react';
 import PageNotFound from './lib/PageNotFound';
 import FullScreenSpinner from './lib/FullScreenSpinner';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -50,6 +50,56 @@ import Users from './pages/employer/Users';
 // description and the plan file for details).
 const SupabaseAuth = lazy(() => import('./pages/SupabaseAuth'));
 
+// Tiny error boundary scoped to a single route. When the wrapped subtree
+// throws — either at chunk-load time (the lazy import promise rejects) or
+// during render — we surface the message inline as a red card instead of
+// letting the failure cascade into a blank screen with no visible signal.
+//
+// Stack-trace gating: full stack only renders in dev builds or when the URL
+// has ?debug=1, so production visitors don't see internal file paths.
+class RouteErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    // eslint-disable-next-line no-console
+    console.error('[RouteErrorBoundary]', this.props.routeName || 'route', error, info);
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    const e = this.state.error;
+    const showStack =
+      import.meta.env.DEV ||
+      (typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('debug') === '1');
+    return (
+      <div className="min-h-screen bg-red-50 dark:bg-red-950 py-12 px-4">
+        <div className="max-w-md mx-auto bg-white dark:bg-slate-900 border border-red-200 dark:border-red-800 rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-red-700 dark:text-red-300 mb-2">
+            Couldn't load {this.props.routeName || 'this page'}
+          </h2>
+          <p className="text-sm text-red-700 dark:text-red-300 mb-3 font-medium">
+            {e?.message || String(e)}
+          </p>
+          {showStack && e?.stack ? (
+            <pre className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words bg-slate-100 dark:bg-slate-800 rounded p-2 max-h-96 overflow-auto">
+              {e.stack}
+            </pre>
+          ) : (
+            <p className="text-xs text-slate-500">
+              Append <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">?debug=1</code> to the URL to see the stack trace.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+}
+
 function useDarkMode() {
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -82,13 +132,17 @@ const AuthenticatedApp = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* New Supabase auth (preview) — lazy-loaded so it doesn't pull the
-          Supabase client into the legacy bundle. */}
+          Supabase client into the legacy bundle. Wrapped in an error
+          boundary so chunk-load failures or render errors render an inline
+          message instead of a blank screen. */}
       <Route
         path="/supabase-auth"
         element={
-          <Suspense fallback={<FullScreenSpinner />}>
-            <SupabaseAuth />
-          </Suspense>
+          <RouteErrorBoundary routeName="Supabase auth">
+            <Suspense fallback={<FullScreenSpinner />}>
+              <SupabaseAuth />
+            </Suspense>
+          </RouteErrorBoundary>
         }
       />
 
